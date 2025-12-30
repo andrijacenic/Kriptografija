@@ -4,6 +4,7 @@ use iced::Length::Fill;
 use iced::widget::{button, center, column, container, text};
 use iced::widget::{opaque, stack};
 use iced::{Color, Element, Length, Renderer, Task, Theme};
+use iced_aw::card;
 pub struct App {
     // Your application state goes here
     pub welcome_message: String,
@@ -60,10 +61,11 @@ impl App {
 
         let mut layers: Vec<Element<Message, Theme, Renderer>> = vec![main_content.into()];
 
-        if (self.window_opened) {
+        if self.window_opened {
             let overlay = container(center(
                 // The actual popup box
-                container(
+                card(
+                    text("title"),
                     column![
                         text("Are you sure?").size(24),
                         text("This action cannot be undone."),
@@ -75,6 +77,7 @@ impl App {
                     .padding(20)
                     .align_x(iced::Alignment::Center),
                 )
+                .on_close(Message::Prozor(false))
                 .width(300),
             ))
             .width(Fill)
