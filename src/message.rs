@@ -5,5 +5,5 @@ pub enum Message {
     // ConfigSaved,
     Pralina,
     Kikiriki,
-    Prozor,
+    Prozor(bool),
 }
