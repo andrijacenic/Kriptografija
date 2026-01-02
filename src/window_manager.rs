@@ -1,28 +1,9 @@
 use std::sync::{Mutex, OnceLock};
 
-pub enum WindowMessage {
-    Response(bool),
-    Close,
-}
-
-#[derive(Debug, Clone, Copy)]
-
-pub enum WindowType {
-    Info,
-    Warning,
-    Error,
-    AddElement,
-}
-
-#[derive(Debug, Clone)]
-pub struct WindowContentBase {
-    pub window_type: WindowType,
-    pub title: String,
-    pub content: String,
-}
+use crate::window_component::WindowContent;
 
 pub struct WindowManager {
-    windows: Vec<WindowContentBase>,
+    windows: Vec<WindowContent>,
 }
 
 impl WindowManager {
@@ -35,18 +16,18 @@ impl WindowManager {
         })
     }
 
-    pub fn add_window(&mut self, window: WindowContentBase) {
+    pub fn add_window(&mut self, window: WindowContent) {
         self.windows.push(window);
     }
 
-    pub fn get_window(&self) -> Option<&WindowContentBase> {
+    pub fn get_window(&self) -> Option<&WindowContent> {
         if self.windows.is_empty() {
             return None;
         }
         self.windows.last()
     }
 
-    pub fn remove_window(&mut self) -> Option<WindowContentBase> {
+    pub fn remove_window(&mut self) -> Option<WindowContent> {
         self.windows.pop()
     }
 

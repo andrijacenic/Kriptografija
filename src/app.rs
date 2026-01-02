@@ -1,5 +1,5 @@
 use crate::utils::AppData;
-use crate::window_manager::WindowContentBase;
+use crate::window_component::{WindowContent, WindowType};
 use crate::{theme, window_manager};
 use iced::Length::Fill;
 use iced::widget::{button, center, column, container, text};
@@ -9,7 +9,7 @@ use iced_aw::card;
 
 #[derive(Debug, Clone)]
 pub enum AppMessage {
-    OpenWindow(WindowContentBase),
+    OpenWindow(WindowContent),
     None,
 }
 
@@ -58,14 +58,14 @@ impl App {
         let main_content = center(
             column![
                 text("Hello, ASDASDASDASDASDASDASDASDASDASDASDAS!").size(50),
-                button("Click Me").on_press(AppMessage::OpenWindow(WindowContentBase {
-                    window_type: crate::window_manager::WindowType::Info,
+                button("Click Me").on_press(AppMessage::OpenWindow(WindowContent {
+                    window_type: WindowType::Info,
                     title: "Info".to_string(),
                     content: "This is an informational window.".to_string(),
+                    window_width: None,
                 })),
             ]
-            .spacing(20)
-            .padding(30),
+            .spacing(20),
         );
 
         let mut layers: Vec<Element<AppMessage, Theme, Renderer>> =
@@ -75,14 +75,19 @@ impl App {
             let window_element = crate::window_component::window_component(
                 window_content.clone(),
                 AppMessage::None,
-                AppMessage::OpenWindow(WindowContentBase {
-                    window_type: crate::window_manager::WindowType::Info,
-                    title: "Info".to_string(),
-                    content: format!("You have {} windows open.", window_manager.window_count()),
+                AppMessage::OpenWindow(WindowContent {
+                    window_type: WindowType::Warning,
+                    title: "Warning".to_string(),
+                    content: format!(
+                        "You have {} windows open.",
+                        window_manager.window_count() + 1
+                    ),
+                    window_width: None,
                 }),
                 AppMessage::None,
+                None::<iced::Element<'_, AppMessage>>,
             );
-            layers.push(window_element);
+            layers.push(opaque(window_element));
         }
 
         stack(layers).into()
