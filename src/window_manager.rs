@@ -30,8 +30,4 @@ impl WindowManager {
     pub fn remove_window(&mut self) -> Option<WindowContent> {
         self.windows.pop()
     }
-
-    pub fn window_count(&self) -> usize {
-        self.windows.len()
-    }
 }

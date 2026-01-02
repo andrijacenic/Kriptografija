@@ -1,7 +1,5 @@
-use std::fs::File;
-
 use crate::utils::AppData;
-use crate::window_component::{WindowContent, WindowType};
+use crate::window_component::{WindowContent, WindowType, custom_window};
 use crate::{theme, window_manager};
 use iced::Length::Fill;
 use iced::widget::{button, center, column, container, text};
@@ -12,6 +10,7 @@ use iced::{Element, Renderer, Task, Theme};
 pub enum AppMessage {
     OpenWindow(WindowContent),
     CloseWindow(Option<bool>),
+    SaveAppData,
     None,
 }
 
@@ -65,46 +64,42 @@ impl App {
                     .remove_window();
                 Task::none()
             }
+            AppMessage::SaveAppData => {
+                match self.app_data.save_file("data.txt".to_string()) {
+                    Ok(_) => window_manager::WindowManager::global()
+                        .lock()
+                        .unwrap()
+                        .add_window(WindowContent {
+                            window_type: WindowType::Info,
+                            title: "Data saved!".to_string(),
+                            content: "Data saved successfully.".to_string(),
+                            window_width: None,
+                        }),
+                    Err(e) => window_manager::WindowManager::global()
+                        .lock()
+                        .unwrap()
+                        .add_window(WindowContent {
+                            window_type: WindowType::Error,
+                            title: "Saving data error!".to_string(),
+                            content: format!("Error saving data: {}", e),
+                            window_width: None,
+                        }),
+                }
+                Task::none()
+            }
             AppMessage::None => Task::none(),
         }
     }
 
     // The UI layout
     pub fn view(&self) -> Element<'_, AppMessage> {
-        let main_content = center(
-            column![
-                text("Hello, ASDASDASDASDASDASDASDASDASDASDASDAS!").size(50),
-                button("Click Me").on_press(AppMessage::OpenWindow(WindowContent {
-                    window_type: WindowType::Info,
-                    title: "Info".to_string(),
-                    content: "This is an informational window.".to_string(),
-                    window_width: None,
-                })),
-            ]
-            .spacing(20),
-        );
+        let main_content = self.get_main_view();
 
         let mut layers: Vec<Element<AppMessage, Theme, Renderer>> =
             vec![container(main_content).width(Fill).height(Fill).into()];
 
-        let window_manager = window_manager::WindowManager::global().lock().unwrap();
-        if let Some(window_content) = window_manager.get_window() {
-            let window_element = crate::window_component::window_component(
-                window_content.clone(),
-                AppMessage::CloseWindow(None),
-                AppMessage::OpenWindow(WindowContent {
-                    window_type: WindowType::Warning,
-                    title: "Warning".to_string(),
-                    content: format!(
-                        "You have {} windows open.",
-                        window_manager.window_count() + 1
-                    ),
-                    window_width: None,
-                }),
-                AppMessage::CloseWindow(Some(false)),
-                None::<iced::Element<'_, AppMessage>>,
-            );
-            layers.push(opaque(window_element));
+        if let Some(window) = self.get_window_view() {
+            layers.push(opaque(window));
         }
 
         stack(layers).into()
@@ -112,5 +107,37 @@ impl App {
 
     pub fn theme(&self) -> Theme {
         self.theme.clone()
+    }
+
+    fn get_main_view(&self) -> Element<'_, AppMessage> {
+        center(
+            column![
+                text("Hello, World!").size(50),
+                button("Open Window").on_press(AppMessage::OpenWindow(WindowContent {
+                    window_type: WindowType::Info,
+                    title: "Info".to_string(),
+                    content: "This is an informational window.".to_string(),
+                    window_width: None,
+                })),
+                button("Save File").on_press(AppMessage::SaveAppData)
+            ]
+            .spacing(20),
+        )
+        .into()
+    }
+
+    fn get_window_view(&self) -> Option<Element<'_, AppMessage>> {
+        let window_manager = window_manager::WindowManager::global().lock().unwrap();
+        if let Some(window_content) = window_manager.get_window() {
+            Some(custom_window(
+                window_content.clone(),
+                AppMessage::CloseWindow(None),
+                AppMessage::CloseWindow(Some(true)),
+                AppMessage::CloseWindow(Some(false)),
+                None::<iced::Element<'_, AppMessage>>,
+            ))
+        } else {
+            None
+        }
     }
 }

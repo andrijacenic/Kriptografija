@@ -97,4 +97,20 @@ impl AppData {
             entries: elements,
         })
     }
+
+    pub fn save_file(&self, filename: String) -> Result<()> {
+        match File::create(filename) {
+            Ok(mut file) => {
+                use std::io::Write;
+                writeln!(file, "{}", self.version)?;
+
+                for entry in &self.entries {
+                    writeln!(file, "{}:{}", entry.key, entry.description)?;
+                }
+            }
+            Err(e) => return Err(e),
+        };
+
+        Ok(())
+    }
 }

@@ -2,8 +2,7 @@ use iced::{
     Color, Element,
     Length::Fill,
     Renderer, Theme,
-    widget::{button, center, column, container, row, text},
-    window::icon::from_rgba,
+    widget::{button, center, container, row, text},
 };
 use iced_aw::{card, style};
 
@@ -22,7 +21,7 @@ pub struct WindowContent {
     pub window_width: Option<u32>,
 }
 
-pub fn window_component<'a, Message>(
+pub fn custom_window<'a, Message>(
     window_content: WindowContent,
     on_close: Message,
     on_okay: Message,
