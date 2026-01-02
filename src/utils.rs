@@ -2,6 +2,11 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Result};
 use std::path::Path;
 
+use crate::window_component::WindowContent;
+use crate::window_manager::WindowManager;
+
+pub const FILE_VERSION: u32 = 1;
+
 #[derive(Debug, Clone)]
 pub struct DataEntry {
     pub key: String,
@@ -9,7 +14,7 @@ pub struct DataEntry {
 }
 
 pub struct AppData {
-    pub version: i32,
+    pub version: u32,
     pub entries: Vec<DataEntry>,
 }
 
@@ -38,30 +43,53 @@ impl AppData {
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "File is empty"))??;
 
         let version =
-            first_line.trim().parse::<i32>().ok().ok_or_else(|| {
+            first_line.trim().parse::<u32>().ok().ok_or_else(|| {
                 io::Error::new(io::ErrorKind::InvalidData, "Invalid version format")
             })?;
 
+        if version != FILE_VERSION {
+            WindowManager::global()
+                .lock()
+                .unwrap()
+                .add_window(WindowContent {
+                    window_type: crate::window_component::WindowType::Warning,
+                    title: "Version Mismatch".to_string(),
+                    content: format!(
+                        "Expected version {}, but found version {}.\nSome features may not work correctly.",
+                        FILE_VERSION, version
+                    ).to_string(),
+                    window_width: None,
+                });
+        }
+
         let mut elements = Vec::new();
         while let Some(line_result) = lines.next() {
-            let separator = line_result?.chars().next().unwrap();
-            if separator == char::from_u32(0).unwrap() {
-                break;
-            } else if separator != char::from_u32(1).unwrap() {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "Invalid element separator!",
-                ));
+            match line_result {
+                Err(e) => return Err(e),
+                Ok(line) => {
+                    if let Some((key, desc)) = line.split_once(':') {
+                        elements.push(DataEntry {
+                            key: key.trim().to_string(),
+                            description: desc.trim().to_string(),
+                        });
+                        continue;
+                    } else {
+                        WindowManager::global()
+                            .lock()
+                            .unwrap()
+                            .add_window(WindowContent {
+                                window_type: crate::window_component::WindowType::Warning,
+                                title: "Undifined line format.".to_string(),
+                                content: format!(
+                                    "Expected '<key>:<description>'  found {}.\nLine ignored.",
+                                    line
+                                )
+                                .to_string(),
+                                window_width: None,
+                            });
+                    }
+                }
             }
-
-            let key = lines
-                .next()
-                .ok_or_else(|| io::Error::new(io::ErrorKind::UnexpectedEof, "Missing Key"))??;
-            let description = lines.next().ok_or_else(|| {
-                io::Error::new(io::ErrorKind::UnexpectedEof, "Missing Description")
-            })??;
-
-            elements.push(DataEntry { key, description });
         }
 
         Ok(AppData {

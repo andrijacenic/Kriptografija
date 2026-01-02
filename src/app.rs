@@ -1,39 +1,53 @@
+use std::fs::File;
+
 use crate::utils::AppData;
 use crate::window_component::{WindowContent, WindowType};
 use crate::{theme, window_manager};
 use iced::Length::Fill;
 use iced::widget::{button, center, column, container, text};
 use iced::widget::{opaque, stack};
-use iced::{Color, Element, Length, Renderer, Task, Theme};
-use iced_aw::card;
+use iced::{Element, Renderer, Task, Theme};
 
 #[derive(Debug, Clone)]
 pub enum AppMessage {
     OpenWindow(WindowContent),
+    CloseWindow(Option<bool>),
     None,
 }
 
 pub struct App {
     app_data: AppData,
+    theme: Theme,
 }
 
 impl App {
-    // Initialize the application state
     pub fn new() -> (Self, Task<AppMessage>) {
-        let app_data_result = AppData::load_file("data.txt".to_string());
-        if app_data_result.is_err() {
-            let app_data = AppData::new().unwrap();
-            return (Self { app_data: app_data }, Task::none());
+        let (app_data, initial_error) = match AppData::load_file("data.txt".to_string()) {
+            Ok(data) => (data, None),
+            Err(e) => (AppData::new().unwrap(), Some(e.to_string())),
+        };
+
+        if let Some(error_msg) = initial_error {
+            window_manager::WindowManager::global()
+                .lock()
+                .unwrap()
+                .add_window(WindowContent {
+                    window_type: WindowType::Error,
+                    title: "Loading data error!".to_string(),
+                    content: format!("Error loading data: {}", error_msg),
+                    window_width: None,
+                });
         }
+
         (
             Self {
-                app_data: app_data_result.unwrap(),
+                app_data,
+                theme: theme::default_theme(),
             },
             Task::none(),
         )
     }
 
-    // Logic for handling messages
     pub fn update(&mut self, _message: AppMessage) -> Task<AppMessage> {
         match _message {
             AppMessage::OpenWindow(content) => {
@@ -43,13 +57,15 @@ impl App {
                     .add_window(content);
                 Task::none()
             }
-            AppMessage::None => {
+            AppMessage::CloseWindow(value) => {
+                print!("Closing window with value: {:?}\n", value);
                 window_manager::WindowManager::global()
                     .lock()
                     .unwrap()
                     .remove_window();
                 Task::none()
             }
+            AppMessage::None => Task::none(),
         }
     }
 
@@ -70,11 +86,12 @@ impl App {
 
         let mut layers: Vec<Element<AppMessage, Theme, Renderer>> =
             vec![container(main_content).width(Fill).height(Fill).into()];
+
         let window_manager = window_manager::WindowManager::global().lock().unwrap();
         if let Some(window_content) = window_manager.get_window() {
             let window_element = crate::window_component::window_component(
                 window_content.clone(),
-                AppMessage::None,
+                AppMessage::CloseWindow(None),
                 AppMessage::OpenWindow(WindowContent {
                     window_type: WindowType::Warning,
                     title: "Warning".to_string(),
@@ -84,7 +101,7 @@ impl App {
                     ),
                     window_width: None,
                 }),
-                AppMessage::None,
+                AppMessage::CloseWindow(Some(false)),
                 None::<iced::Element<'_, AppMessage>>,
             );
             layers.push(opaque(window_element));
@@ -94,6 +111,6 @@ impl App {
     }
 
     pub fn theme(&self) -> Theme {
-        theme::default_theme()
+        self.theme.clone()
     }
 }
