@@ -5,6 +5,8 @@ pub enum WindowMessage {
     Close,
 }
 
+#[derive(Debug, Clone, Copy)]
+
 pub enum WindowType {
     Info,
     Warning,
@@ -12,18 +14,18 @@ pub enum WindowType {
     AddElement,
 }
 
+#[derive(Debug, Clone)]
 pub struct WindowContentBase {
     pub window_type: WindowType,
     pub title: String,
     pub content: String,
 }
 
-struct WindowManager {
+pub struct WindowManager {
     windows: Vec<WindowContentBase>,
 }
 
 impl WindowManager {
-    // The "static method" to get the instance
     pub fn global() -> &'static Mutex<WindowManager> {
         static INSTANCE: OnceLock<Mutex<WindowManager>> = OnceLock::new();
         INSTANCE.get_or_init(|| {
@@ -48,25 +50,7 @@ impl WindowManager {
         self.windows.pop()
     }
 
-    // TODO: Should we implement the renderer method here or in App?
-    pub fn render_window(&self) {
-        let window = self.get_window();
-        if let Some(window) = window {
-            match window.window_type {
-                WindowType::Info => {
-                    // Render info window
-                }
-                WindowType::Warning => {
-                    // Render warning window
-                }
-                WindowType::Error => {
-                    // Render error window
-                }
-                WindowType::AddElement => {
-                    // Render add element window
-                }
-            }
-        }
+    pub fn window_count(&self) -> usize {
+        self.windows.len()
     }
 }
-// let window_manager = WindowManager::global().lock().unwrap();

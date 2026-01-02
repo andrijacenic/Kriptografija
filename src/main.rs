@@ -1,7 +1,7 @@
 mod app;
-mod message;
 mod theme;
 mod utils;
+mod window_component;
 mod window_manager;
 
 use app::App;

@@ -3,21 +3,21 @@ use std::io::{self, BufRead, BufReader, Result};
 use std::path::Path;
 
 #[derive(Debug, Clone)]
-pub struct Element {
+pub struct DataEntry {
     pub key: String,
     pub description: String,
 }
 
 pub struct AppData {
     pub version: i32,
-    pub elements: Vec<Element>,
+    pub entries: Vec<DataEntry>,
 }
 
 impl AppData {
     pub fn new() -> Result<AppData> {
         Ok(AppData {
             version: 1,
-            elements: Vec::new(),
+            entries: Vec::new(),
         })
     }
 
@@ -61,9 +61,12 @@ impl AppData {
                 io::Error::new(io::ErrorKind::UnexpectedEof, "Missing Description")
             })??;
 
-            elements.push(Element { key, description });
+            elements.push(DataEntry { key, description });
         }
 
-        Ok(AppData { version, elements })
+        Ok(AppData {
+            version,
+            entries: elements,
+        })
     }
 }
