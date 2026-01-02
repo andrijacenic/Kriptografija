@@ -1,25 +1,27 @@
 use crate::message::Message;
 use crate::theme;
+use crate::utils::AppData;
 use iced::Length::Fill;
 use iced::widget::{button, center, column, container, text};
 use iced::widget::{opaque, stack};
 use iced::{Color, Element, Length, Renderer, Task, Theme};
 use iced_aw::card;
+
 pub struct App {
-    // Your application state goes here
-    pub welcome_message: String,
-    window_opened: bool,
-    window_answer: Option<bool>,
+    app_data: AppData,
 }
 
 impl App {
     // Initialize the application state
     pub fn new() -> (Self, Task<Message>) {
+        let app_data_result = AppData::load_file("data.txt".to_string());
+        if app_data_result.is_err() {
+            let app_data = AppData::new().unwrap();
+            return (Self { app_data: app_data }, Task::none());
+        }
         (
             Self {
-                welcome_message: String::from("Welcome to your Iced App!"),
-                window_opened: false,
-                window_answer: None,
+                app_data: app_data_result.unwrap(),
             },
             Task::none(),
         )
@@ -27,71 +29,30 @@ impl App {
 
     // Logic for handling messages
     pub fn update(&mut self, _message: Message) -> Task<Message> {
-        match _message {
-            Message::Kikiriki => {
-                self.welcome_message = "Kikiriki".to_owned();
-                Task::none()
-            }
-            Message::Pralina => {
-                self.welcome_message = "Pralina".to_owned();
-                Task::none()
-            }
-            Message::Prozor(opened) => {
-                self.window_opened = opened;
-                Task::none()
-            }
-        }
+        // match _message {
+        //     Message::Kikiriki => {
+        //         self.welcome_message = "Kikiriki".to_owned();
+        //         Task::none()
+        //     }
+        //     Message::Pralina => {
+        //         self.welcome_message = "Pralina".to_owned();
+        //         Task::none()
+        //     }
+        //     Message::Prozor(opened) => {
+        //         self.window_opened = opened;
+        //         Task::none()
+        //     }
+        // }
+        Task::none()
     }
 
     // The UI layout
     pub fn view(&self) -> Element<'_, Message> {
-        let kikiriki = button("Kikiriki").on_press(Message::Kikiriki);
-        let pralina = button("Pralina").on_press(Message::Pralina);
-        let prozor = button("Prozor").on_press(Message::Prozor(true));
+        let content = column![text("Hello, Iced!").size(50)]
+            .spacing(20)
+            .padding(40);
 
-        let main_content = center(
-            column![
-                text(&self.welcome_message).size(40),
-                kikiriki,
-                pralina,
-                prozor,
-            ]
-            .spacing(20),
-        );
-
-        let mut layers: Vec<Element<Message, Theme, Renderer>> = vec![main_content.into()];
-
-        if self.window_opened {
-            let overlay = container(center(
-                // The actual popup box
-                card(
-                    text("title"),
-                    column![
-                        text("Are you sure?").size(24),
-                        text("This action cannot be undone."),
-                        button("Yes, do it -> KIKIRIKI").on_press(Message::Kikiriki),
-                        button("Cancel -> PRALINA").on_press(Message::Pralina),
-                        button("EXIT -> PRALINA").on_press(Message::Prozor(false)),
-                    ]
-                    .spacing(15)
-                    .padding(20)
-                    .align_x(iced::Alignment::Center),
-                )
-                .on_close(Message::Prozor(false))
-                .width(300),
-            ))
-            .width(Fill)
-            .height(Fill)
-            .style(|_| container::Style {
-                // Dim the background (semi-transparent black)
-                background: Some(Color::from_rgba(0.0, 0.0, 0.0, 0.7).into()),
-                ..Default::default()
-            });
-
-            layers.push(opaque(overlay).into());
-        }
-
-        stack(layers).into()
+        container(content).width(Fill).height(Fill).into()
     }
 
     pub fn theme(&self) -> Theme {
