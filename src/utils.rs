@@ -3,6 +3,7 @@ use std::io::{self, BufRead, BufReader, Result};
 use std::path::Path;
 
 use regex::Regex;
+use uuid::Uuid;
 
 use crate::window_component::{WindowContent, WindowType};
 use crate::window_manager::WindowManager;
@@ -11,6 +12,7 @@ pub const FILE_VERSION: u32 = 1;
 
 #[derive(Debug, Clone)]
 pub struct DataEntry {
+    pub id: Uuid,
     pub key: String,
     pub description: String,
 }
@@ -80,6 +82,7 @@ impl AppData {
                         )
                     }) {
                         elements.push(DataEntry {
+                            id: Uuid::new_v4(),
                             key: key.trim().to_string(),
                             description: desc.trim().to_string(),
                         });

@@ -20,7 +20,7 @@ pub enum InputChangeType {
 pub enum AppMessage {
     OpenWindow(WindowContent),
     CloseWindow(Option<WindowContent>),
-    AddEntry(DataEntry),
+    AddEntry((DataEntry, Option<WindowContent>)),
     InputChange(InputChangeType, String),
     SaveAppData,
     None,
@@ -29,6 +29,7 @@ pub enum AppMessage {
 pub struct App {
     app_data: AppData,
     theme: Theme,
+    editing_id: Option<uuid::Uuid>,
     key_input_value: String,
     decription_input_value: String,
 }
@@ -58,6 +59,7 @@ impl App {
             Self {
                 app_data,
                 theme: theme::default_theme(),
+                editing_id: None,
                 key_input_value: String::new(),
                 decription_input_value: String::new(),
             },
@@ -97,9 +99,19 @@ impl App {
                 }
                 Task::none()
             }
-            AppMessage::AddEntry(entry) => {
-                self.app_data.entries.push(entry);
-                Task::done(AppMessage::CloseWindow(None))
+            AppMessage::AddEntry((entry, window_content)) => {
+                if let Some(existing_entry) = self
+                    .app_data
+                    .entries
+                    .iter_mut()
+                    .find(|el| el.id == entry.id)
+                {
+                    existing_entry.key = entry.key;
+                    existing_entry.description = entry.description;
+                } else {
+                    self.app_data.entries.push(entry);
+                }
+                Task::done(AppMessage::CloseWindow(window_content))
             }
             AppMessage::InputChange(input_type, value) => {
                 match input_type {
@@ -192,10 +204,14 @@ impl App {
                     (
                         Some(self.create_entity_add_window_body()),
                         if self.is_data_entry_valid() {
-                            Some(AppMessage::AddEntry(DataEntry {
-                                key: self.key_input_value.clone(),
-                                description: self.decription_input_value.clone(),
-                            }))
+                            Some(AppMessage::AddEntry((
+                                DataEntry {
+                                    id: self.editing_id.unwrap_or(uuid::Uuid::new_v4()),
+                                    key: self.key_input_value.clone(),
+                                    description: self.decription_input_value.clone(),
+                                },
+                                Some(window_content.clone()),
+                            )))
                         } else {
                             Some(AppMessage::OpenWindow(WindowContent::new(
                                 WindowType::Warning,
