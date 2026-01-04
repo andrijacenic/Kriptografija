@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Result};
 use std::path::Path;
 
-use crate::window_component::WindowContent;
+use crate::window_component::{WindowContent, WindowType};
 use crate::window_manager::WindowManager;
 
 pub const FILE_VERSION: u32 = 1;
@@ -51,15 +51,16 @@ impl AppData {
             WindowManager::global()
                 .lock()
                 .unwrap()
-                .add_window(WindowContent {
-                    window_type: crate::window_component::WindowType::Warning,
-                    title: "Version Mismatch".to_string(),
-                    content: format!(
+                .add_window(WindowContent::new(
+                    WindowType::Warning,
+                    "Version Mismatch".to_string(),
+                    format!(
                         "Expected version {}, but found version {}.\nSome features may not work correctly.",
                         FILE_VERSION, version
                     ).to_string(),
-                    window_width: None,
-                });
+                     None, 
+                                false,
+                                true,));
         }
 
         let mut elements = Vec::new();
@@ -77,16 +78,18 @@ impl AppData {
                         WindowManager::global()
                             .lock()
                             .unwrap()
-                            .add_window(WindowContent {
-                                window_type: crate::window_component::WindowType::Warning,
-                                title: "Undifined line format.".to_string(),
-                                content: format!(
+                            .add_window(WindowContent::new(
+                                WindowType::Warning,
+                                "Undifined line format.".to_string(),
+                                format!(
                                     "Expected '<key>:<description>'  found {}.\nLine ignored.",
                                     line
                                 )
                                 .to_string(),
-                                window_width: None,
-                            });
+                                None,
+                                false,
+                                true,
+                            ));
                     }
                 }
             }

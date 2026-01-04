@@ -30,4 +30,12 @@ impl WindowManager {
     pub fn remove_window(&mut self) -> Option<WindowContent> {
         self.windows.pop()
     }
+
+    pub fn remove_window_by_id(&mut self, id: uuid::Uuid) -> Option<WindowContent> {
+        if let Some(pos) = self.windows.iter().position(|x| x.id == id) {
+            Some(self.windows.remove(pos))
+        } else {
+            None
+        }
+    }
 }
