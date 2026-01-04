@@ -1,16 +1,20 @@
+use std::default;
+
 use iced::{
     Color, Element,
     Length::Fill,
     Renderer, Theme,
-    widget::{button, center, container, row, text},
+    widget::{Text, button, center, container, row, text},
 };
 use iced_aw::{card, style};
+use iced_fonts::lucide::{info, octagon_alert, triangle_alert};
 
 #[derive(Debug, Clone, Copy)]
 pub enum WindowType {
     Info,
     Warning,
     Error,
+    AddEntry,
 }
 
 #[derive(Debug, Clone)]
@@ -32,9 +36,15 @@ where
     Message: Clone + 'a,
 {
     let card_style = match window_content.window_type {
-        WindowType::Info => style::card::primary,
         WindowType::Warning => style::card::warning,
         WindowType::Error => style::card::danger,
+        _default => style::card::primary,
+    };
+
+    let icon: Text<'_, Theme, Renderer> = match window_content.window_type {
+        WindowType::Warning => triangle_alert(),
+        WindowType::Error => octagon_alert(),
+        _default => info(),
     };
 
     let window_width = if let Some(width) = window_content.window_width {
@@ -50,29 +60,32 @@ where
     };
 
     container(center(
-        card(text(window_content.title), body_content)
-            .foot(
-                row![
-                    button("Okay")
-                        .on_press(on_okay.clone())
-                        .style(|theme: &Theme, _| button::Style {
-                            background: Some(theme.palette().primary.into()),
-                            text_color: Color::WHITE,
-                            ..Default::default()
-                        }),
-                    button("Cancel")
-                        .on_press(on_cancel.clone())
-                        .style(|theme: &Theme, _| button::Style {
-                            background: Some(theme.palette().danger.into()),
-                            text_color: Color::WHITE,
-                            ..Default::default()
-                        }),
-                ]
-                .spacing(30),
-            )
-            .on_close(on_close)
-            .style(card_style)
-            .width(window_width),
+        card(
+            row![icon, text(window_content.title)].spacing(10),
+            body_content,
+        )
+        .foot(
+            row![
+                button("Okay")
+                    .on_press(on_okay)
+                    .style(|theme: &Theme, _| button::Style {
+                        background: Some(theme.palette().primary.into()),
+                        text_color: Color::WHITE,
+                        ..Default::default()
+                    }),
+                button("Cancel")
+                    .on_press(on_cancel)
+                    .style(|theme: &Theme, _| button::Style {
+                        background: Some(theme.palette().danger.into()),
+                        text_color: Color::WHITE,
+                        ..Default::default()
+                    }),
+            ]
+            .spacing(30),
+        )
+        .on_close(on_close)
+        .style(card_style)
+        .width(window_width),
     ))
     .width(Fill)
     .height(Fill)

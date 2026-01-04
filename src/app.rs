@@ -1,10 +1,12 @@
+use iced::Fill;
+use iced::widget::{button, center, column, container, text};
+use iced::widget::{opaque, stack};
+use iced::{Element, Renderer, Task, Theme, font};
+use iced_fonts::LUCIDE_FONT_BYTES;
+
 use crate::utils::AppData;
 use crate::window_component::{WindowContent, WindowType, custom_window};
 use crate::{theme, window_manager};
-use iced::Length::Fill;
-use iced::widget::{button, center, column, container, text};
-use iced::widget::{opaque, stack};
-use iced::{Element, Renderer, Task, Theme};
 
 #[derive(Debug, Clone)]
 pub enum AppMessage {
@@ -43,7 +45,17 @@ impl App {
                 app_data,
                 theme: theme::default_theme(),
             },
-            Task::none(),
+            Task::batch(vec![font::load(LUCIDE_FONT_BYTES).map(
+                |result| match result {
+                    Err(e) => AppMessage::OpenWindow(WindowContent {
+                        window_type: WindowType::Error,
+                        title: "Font Load Error".to_string(),
+                        content: format!("Failed to load Lucide font: {:?}", e),
+                        window_width: None,
+                    }),
+                    Ok(_) => AppMessage::None,
+                },
+            )]),
         )
     }
 
