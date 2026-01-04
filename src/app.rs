@@ -1,10 +1,10 @@
 use iced::Alignment::Center;
-use iced::widget::{Column, button, center, column, container, row, text, text_input};
+use iced::widget::space::horizontal;
+use iced::widget::{Column, button, column, container, row, text, text_input};
 use iced::widget::{opaque, stack};
 use iced::{Color, Element, Renderer, Task, Theme, font};
 use iced::{Fill, Length};
 use iced_fonts::LUCIDE_FONT_BYTES;
-use uuid::Uuid;
 
 use crate::entry_component::entry_component;
 use crate::theme;
@@ -20,18 +20,20 @@ pub enum InputChangeType {
 
 #[derive(Debug, Clone)]
 pub enum AppMessage {
-    OpenWindow(WindowContent),
-    CloseWindow(Option<WindowContent>),
-    AddEntry((DataEntry, Option<WindowContent>)),
+    OpenWindow(WindowContent<AppMessage>),
+    CloseWindow((Option<WindowContent<AppMessage>>, bool)),
+    AddEntry((DataEntry, Option<WindowContent<AppMessage>>)),
     InputChange(InputChangeType, String),
     SaveAppData,
     DeleteEntry((DataEntry, bool)),
     EditEntry(DataEntry),
+    AddNewEntry,
     None,
 }
 
 pub struct App {
-    app_data: AppData,
+    window_manager: WindowManager<AppMessage>,
+    app_data: AppData<AppMessage>,
     theme: Theme,
     editing_id: Option<uuid::Uuid>,
     key_input_value: String,
@@ -40,72 +42,93 @@ pub struct App {
 
 impl App {
     pub fn new() -> (Self, Task<AppMessage>) {
-        let (app_data, initial_error) = match AppData::load_file("data.txt".to_string()) {
-            Ok(data) => (data, None),
-            Err(e) => (AppData::new().unwrap(), Some(e.to_string())),
+        let window_manager = WindowManager::new();
+        let mut app_data = AppData::new(AppMessage::None);
+
+        let load_result = app_data.load_file("data.txt".to_string());
+
+        let init_task = match load_result {
+            Ok(_) => Task::none(),
+            Err(error) => Task::done(AppMessage::OpenWindow(WindowContent::new(
+                WindowType::Error,
+                "Error Loading App Data.".to_string(),
+                format!("{:?}", error),
+                None,
+                false,
+                true,
+                None,
+            ))),
         };
 
-        if let Some(error_msg) = initial_error {
-            WindowManager::global()
-                .lock()
-                .unwrap()
-                .add_window(WindowContent::new(
+        let combined_tasks = Task::batch(vec![
+            font::load(LUCIDE_FONT_BYTES).map(|result| match result {
+                Err(e) => AppMessage::OpenWindow(WindowContent::new(
                     WindowType::Error,
-                    "Loading data error!".to_string(),
-                    format!("Error loading data: {}", error_msg),
+                    "Font Load Error".to_string(),
+                    format!("Failed to load Lucide font: {:?}", e),
                     None,
                     true,
                     true,
-                ));
-        }
+                    None,
+                )),
+                Ok(_) => AppMessage::None,
+            }),
+            init_task,
+        ]);
 
         (
             Self {
                 app_data,
+                window_manager,
                 theme: theme::default_theme(),
                 editing_id: None,
                 key_input_value: String::new(),
                 decription_input_value: String::new(),
             },
-            Task::batch(vec![font::load(LUCIDE_FONT_BYTES).map(
-                |result| match result {
-                    Err(e) => AppMessage::OpenWindow(WindowContent::new(
-                        WindowType::Error,
-                        "Font Load Error".to_string(),
-                        format!("Failed to load Lucide font: {:?}", e),
-                        None,
-                        true,
-                        true,
-                    )),
-                    Ok(_) => AppMessage::None,
-                },
-            )]),
+            combined_tasks,
         )
     }
 
     pub fn update(&mut self, _message: AppMessage) -> Task<AppMessage> {
         match _message {
             AppMessage::OpenWindow(content) => {
-                WindowManager::global().lock().unwrap().add_window(content);
+                self.window_manager.add_window(content);
                 Task::none()
             }
-            AppMessage::CloseWindow(value) => {
-                match value {
-                    Some(window_content) => {
-                        WindowManager::global()
-                            .lock()
-                            .unwrap()
-                            .remove_window_by_id(window_content.id);
-                    }
-                    None => {
-                        WindowManager::global().lock().unwrap().remove_window();
+            AppMessage::CloseWindow((value, is_okay)) => match value {
+                Some(window_content) => {
+                    self.window_manager.remove_window_by_id(window_content.id);
+                    if let Some(on_okay) = window_content.on_okay
+                        && is_okay
+                    {
+                        Task::done(on_okay.as_ref().clone())
+                    } else {
+                        Task::none()
                     }
                 }
-                Task::none()
+                None => {
+                    self.window_manager.remove_window();
+                    Task::none()
+                }
+            },
+            AppMessage::AddNewEntry => {
+                self.editing_id = None;
+                self.key_input_value = String::new();
+                self.decription_input_value = String::new();
+                Task::done(AppMessage::OpenWindow(WindowContent::new(
+                    WindowType::EntryEditor,
+                    "Edit Entry".to_string(),
+                    String::new(),
+                    Some(600),
+                    true,
+                    true,
+                    None,
+                )))
             }
             AppMessage::DeleteEntry((entry, checked)) => {
                 if let Some(pos) = self.app_data.entries.iter().position(|x| x.id == entry.id) {
                     if checked {
+                        self.window_manager.remove_window();
                         self.app_data.entries.remove(pos);
                         Task::none()
                     } else {
@@ -116,6 +139,7 @@ impl App {
                             None,
                             true,
                             true,
+                            Some(AppMessage::DeleteEntry((entry, true))),
                         )))
                     }
                 } else {
@@ -133,6 +157,7 @@ impl App {
                     Some(600),
                     true,
                     true,
+                    None,
                 )))
             }
             AppMessage::AddEntry((entry, window_content)) => {
@@ -147,7 +172,7 @@ impl App {
                 } else {
                     self.app_data.entries.push(entry);
                 }
-                Task::done(AppMessage::CloseWindow(window_content))
+                Task::done(AppMessage::CloseWindow((window_content, true)))
             }
             AppMessage::InputChange(input_type, value) => {
                 match input_type {
@@ -162,32 +187,24 @@ impl App {
             }
             AppMessage::SaveAppData => {
                 match self.app_data.save_file("data.txt".to_string()) {
-                    Ok(_) => {
-                        WindowManager::global()
-                            .lock()
-                            .unwrap()
-                            .add_window(WindowContent::new(
-                                WindowType::Info,
-                                "Data saved!".to_string(),
-                                "Data saved successfully.".to_string(),
-                                None,
-                                true,
-                                true,
-                            ))
-                    }
-                    Err(e) => {
-                        WindowManager::global()
-                            .lock()
-                            .unwrap()
-                            .add_window(WindowContent::new(
-                                WindowType::Error,
-                                "Saving data error!".to_string(),
-                                format!("Error saving data: {}", e),
-                                None,
-                                true,
-                                true,
-                            ))
-                    }
+                    Ok(_) => self.window_manager.add_window(WindowContent::new(
+                        WindowType::Info,
+                        "Data saved!".to_string(),
+                        "Data saved successfully.".to_string(),
+                        None,
+                        true,
+                        true,
+                        None,
+                    )),
+                    Err(e) => self.window_manager.add_window(WindowContent::new(
+                        WindowType::Error,
+                        "Saving data error!".to_string(),
+                        format!("Error saving data: {}", e),
+                        None,
+                        false,
+                        true,
+                        None,
+                    )),
                 }
                 Task::none()
             }
@@ -223,13 +240,22 @@ impl App {
                 AppMessage::EditEntry(entry.clone()),
             ));
         }
-
-        entries_column.padding(20).into()
+        entries_column
+            .push(
+                row![
+                    horizontal(),
+                    button("Add").on_press(AppMessage::AddNewEntry),
+                    button("Save").on_press(AppMessage::SaveAppData)
+                ]
+                .spacing(10),
+            )
+            .spacing(10)
+            .padding(20)
+            .into()
     }
 
     fn get_window_view(&self) -> Option<Element<'_, AppMessage>> {
-        let window_manager = WindowManager::global().lock().unwrap();
-        if let Some(window_content) = window_manager.get_window() {
+        if let Some(window_content) = self.window_manager.get_window() {
             let (custom_body, on_okay): (Option<Element<'_, AppMessage>>, Option<AppMessage>) =
                 if let WindowType::EntryEditor = window_content.window_type {
                     (
@@ -251,20 +277,27 @@ impl App {
                                 None,
                                 false,
                                 true,
+                                None,
                             )))
                         },
                     )
                 } else {
                     (
                         None,
-                        Some(AppMessage::CloseWindow(Some(window_content.clone()))),
+                        Some(match &window_content.on_okay {
+                            Some(boxed_msg) => (**boxed_msg).clone(),
+                            None => AppMessage::CloseWindow((Some(window_content.clone()), true)),
+                        }),
                     )
                 };
             Some(custom_window(
                 window_content.clone(),
-                AppMessage::CloseWindow(Some(window_content.clone())),
-                on_okay.unwrap_or(AppMessage::CloseWindow(Some(window_content.clone()))),
-                AppMessage::CloseWindow(Some(window_content.clone())),
+                AppMessage::CloseWindow((Some(window_content.clone()), false)),
+                on_okay.unwrap_or(AppMessage::CloseWindow((
+                    Some(window_content.clone()),
+                    true,
+                ))),
+                AppMessage::CloseWindow((Some(window_content.clone()), false)),
                 custom_body,
             ))
         } else {

@@ -5,9 +5,6 @@ use std::path::Path;
 use regex::Regex;
 use uuid::Uuid;
 
-use crate::window_component::{WindowContent, WindowType};
-use crate::window_manager::WindowManager;
-
 pub const FILE_VERSION: u32 = 1;
 
 #[derive(Debug, Clone)]
@@ -27,97 +24,163 @@ impl DataEntry {
     }
 }
 
-pub struct AppData {
+pub struct AppData<Message>
+where
+    Message: Clone,
+{
     pub version: u32,
     pub entries: Vec<DataEntry>,
+    _message: Message,
 }
 
-impl AppData {
-    pub fn new() -> Result<AppData> {
-        Ok(AppData {
+impl<Message> AppData<Message>
+where
+    Message: Clone,
+{
+    pub fn new(none: Message) -> AppData<Message> {
+        AppData {
             version: 1,
             entries: Vec::new(),
-        })
+            _message: none,
+        }
     }
 
-    pub fn load_file(filename: String) -> Result<AppData> {
-        let reg = Regex::new(r"(?P<key>(?:\\:|[^:])+):(?P<desc>.*)").unwrap();
+    pub fn load_file(&mut self, filename: String) -> io::Result<()> {
+        let path = Path::new(&filename);
 
-        if !Path::exists(Path::new(&filename)) {
+        if !path.exists() {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
                 "File does not exist",
             ));
         }
 
-        let file = File::open(filename)?;
+        let file = File::open(path)?;
         let reader = BufReader::new(file);
         let mut lines = reader.lines();
+
+        let reg = Regex::new(r"(?P<key>(?:\\:|[^:])+):(?P<desc>.*)").unwrap();
 
         let first_line = lines
             .next()
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "File is empty"))??;
 
-        let version =
-            first_line.trim().parse::<u32>().ok().ok_or_else(|| {
-                io::Error::new(io::ErrorKind::InvalidData, "Invalid version format")
-            })?;
+        let version = first_line
+            .trim()
+            .parse::<u32>()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid version format"))?;
 
         if version != FILE_VERSION {
-            WindowManager::global()
-                .lock()
-                .unwrap()
-                .add_window(WindowContent::new(
-                    WindowType::Warning,
-                    "Version Mismatch".to_string(),
-                    format!(
-                        "Expected version {}, but found version {}.\nSome features may not work correctly.",
-                        FILE_VERSION, version
-                    ).to_string(),
-                    None,
-                    false,
-                    true,
-                ));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Version mismatch",
+            ));
         }
 
-        let mut elements = Vec::new();
-        while let Some(line_result) = lines.next() {
-            match line_result {
-                Err(e) => return Err(e),
-                Ok(line) => {
-                    if let Some((key, desc)) = reg.captures(&line).map(|cap| {
-                        (
-                            cap.name("key").unwrap().as_str().replace(r"\:", ":"),
-                            cap.name("desc").unwrap().as_str().replace(r"\:", ":"),
-                        )
-                    }) {
-                        elements.push(DataEntry::new(key.trim(), desc.trim()));
-                    } else {
-                        WindowManager::global()
-                            .lock()
-                            .unwrap()
-                            .add_window(WindowContent::new(
-                                WindowType::Warning,
-                                "Undifined line format.".to_string(),
-                                format!(
-                                    "Expected '<key>:<description>'  found {}.\nLine ignored.",
-                                    line
-                                )
-                                .to_string(),
-                                None,
-                                false,
-                                true,
-                            ));
-                    }
-                }
+        let mut new_entries = Vec::new();
+
+        for (index, line_result) in lines.enumerate() {
+            let line = line_result?;
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            if let Some(caps) = reg.captures(&line) {
+                let key = caps["key"].replace(r"\:", ":");
+                let desc = caps["desc"].replace(r"\:", ":");
+
+                new_entries.push(DataEntry::new(key.trim(), desc.trim()));
+            } else {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!(
+                        "Malformed line at #{} (expected 'key:desc'): {}",
+                        index + 2,
+                        line
+                    ),
+                ));
             }
         }
-
-        Ok(AppData {
-            version,
-            entries: elements,
-        })
+        self.entries = new_entries;
+        Ok(())
     }
+
+    // pub fn load_file(&self, filename: String) -> Result<(AppData<Message>, Message)> {
+    //     let reg = Regex::new(r"(?P<key>(?:\\:|[^:])+):(?P<desc>.*)").unwrap();
+
+    //     if !Path::exists(Path::new(&filename)) {
+    //         return Err(io::Error::new(
+    //             io::ErrorKind::NotFound,
+    //             "File does not exist",
+    //         ));
+    //     }
+
+    //     let file = File::open(filename)?;
+    //     let reader = BufReader::new(file);
+    //     let mut lines = reader.lines();
+
+    //     let first_line = lines
+    //         .next()
+    //         .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "File is empty"))??;
+
+    //     let version =
+    //         first_line.trim().parse::<u32>().ok().ok_or_else(|| {
+    //             io::Error::new(io::ErrorKind::InvalidData, "Invalid version format")
+    //         })?;
+
+    //     if version != FILE_VERSION {
+    //         window_manager
+    //             .add_window(WindowContent::new(
+    //                 WindowType::Warning,
+    //                 "Version Mismatch".to_string(),
+    //                 format!(
+    //                     "Expected version {}, but found version {}.\nSome features may not work correctly.",
+    //                     FILE_VERSION, version
+    //                 ).to_string(),
+    //                 None,
+    //                 false,
+    //                 true,
+    //                 self.message.clone()
+    //             ));
+    //     }
+
+    //     let mut elements = Vec::new();
+    //     while let Some(line_result) = lines.next() {
+    //         match line_result {
+    //             Err(e) => return Err(e),
+    //             Ok(line) => {
+    //                 if let Some((key, desc)) = reg.captures(&line).map(|cap| {
+    //                     (
+    //                         cap.name("key").unwrap().as_str().replace(r"\:", ":"),
+    //                         cap.name("desc").unwrap().as_str().replace(r"\:", ":"),
+    //                     )
+    //                 }) {
+    //                     elements.push(DataEntry::new(key.trim(), desc.trim()));
+    //                 } else {
+    //                     window_manager.add_window(WindowContent::new(
+    //                         WindowType::Warning,
+    //                         "Undifined line format.".to_string(),
+    //                         format!(
+    //                             "Expected '<key>:<description>'  found {}.\nLine ignored.",
+    //                             line
+    //                         )
+    //                         .to_string(),
+    //                         None,
+    //                         false,
+    //                         true,
+    //                         self.message.clone(),
+    //                     ));
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     Ok(AppData {
+    //         version,
+    //         entries: elements,
+    //         message: self.message.clone(),
+    //     })
+    // }
 
     pub fn save_file(&self, filename: String) -> Result<()> {
         match File::create(filename) {

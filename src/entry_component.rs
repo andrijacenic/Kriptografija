@@ -19,7 +19,7 @@ where
 {
     container(
         row![
-            container(text(entry.key.clone())).width(FillPortion(1)),
+            container(text(entry.key.clone())).width(FillPortion(2)),
             divider_component(30),
             container(text(entry.description.clone())).width(FillPortion(8)),
             divider_component(30),

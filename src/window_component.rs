@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use iced::{
     Color, Element,
     Length::Fill,
@@ -19,7 +21,7 @@ pub enum WindowType {
 }
 
 #[derive(Debug, Clone)]
-pub struct WindowContent {
+pub struct WindowContent<Message> {
     pub id: Uuid,
     pub window_type: WindowType,
     pub title: String,
@@ -27,9 +29,10 @@ pub struct WindowContent {
     pub window_width: Option<u32>,
     pub show_cancel: bool,
     pub show_okay: bool,
+    pub on_okay: Option<Box<Message>>,
 }
 
-impl WindowContent {
+impl<Message> WindowContent<Message> {
     pub fn new(
         window_type: WindowType,
         title: String,
@@ -37,6 +40,7 @@ impl WindowContent {
         window_width: Option<u32>,
         show_cancel: bool,
         show_okay: bool,
+        on_okay: Option<Message>,
     ) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -46,19 +50,20 @@ impl WindowContent {
             window_width,
             show_cancel,
             show_okay,
+            on_okay: on_okay.map(Box::new),
         }
     }
 }
 
 pub fn custom_window<'a, Message>(
-    window_content: WindowContent,
+    window_content: WindowContent<Message>,
     on_close: Message,
     on_okay: Message,
     on_cancel: Message,
     body: Option<impl Into<Element<'a, Message, Theme, Renderer>>>,
 ) -> Element<'a, Message>
 where
-    Message: Clone + 'a,
+    Message: Clone + Debug + 'a,
 {
     let card_style = match window_content.window_type {
         WindowType::Warning => style::card::warning,
