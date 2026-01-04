@@ -2,6 +2,8 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Result};
 use std::path::Path;
 
+use regex::Regex;
+
 use crate::window_component::{WindowContent, WindowType};
 use crate::window_manager::WindowManager;
 
@@ -27,6 +29,8 @@ impl AppData {
     }
 
     pub fn load_file(filename: String) -> Result<AppData> {
+        let reg = Regex::new(r"(?P<key>(?:\\:|[^:])+):(?P<desc>.*)").unwrap();
+
         if !Path::exists(Path::new(&filename)) {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
@@ -58,9 +62,10 @@ impl AppData {
                         "Expected version {}, but found version {}.\nSome features may not work correctly.",
                         FILE_VERSION, version
                     ).to_string(),
-                     None, 
-                                false,
-                                true,));
+                    None,
+                    false,
+                    true,
+                ));
         }
 
         let mut elements = Vec::new();
@@ -68,12 +73,17 @@ impl AppData {
             match line_result {
                 Err(e) => return Err(e),
                 Ok(line) => {
-                    if let Some((key, desc)) = line.split_once(':') {
+                    if let Some((key, desc)) = reg.captures(&line).map(|cap| {
+                        (
+                            cap.name("key").unwrap().as_str().replace(r"\:", ":"),
+                            cap.name("desc").unwrap().as_str().replace(r"\:", ":"),
+                        )
+                    }) {
                         elements.push(DataEntry {
                             key: key.trim().to_string(),
                             description: desc.trim().to_string(),
                         });
-                        continue;
+                        print!("Loaded entry: key='{}', description='{}'\n", key, desc);
                     } else {
                         WindowManager::global()
                             .lock()
@@ -108,7 +118,12 @@ impl AppData {
                 writeln!(file, "{}", self.version)?;
 
                 for entry in &self.entries {
-                    writeln!(file, "{}:{}", entry.key, entry.description)?;
+                    writeln!(
+                        file,
+                        "{}:{}",
+                        entry.key.replace(":", r"\:"),
+                        entry.description.replace(":", r"\:")
+                    )?;
                 }
             }
             Err(e) => return Err(e),
