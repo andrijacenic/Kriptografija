@@ -1,12 +1,14 @@
 use iced::{
-    Border, Color, Element,
+    Color, Element,
     Length::Fill,
     Renderer, Theme,
-    widget::{Row, Text, button, center, container, row, space::horizontal, text},
+    widget::{Row, Text, center, container, row, space::horizontal, text},
 };
 use iced_aw::{card, style};
 use iced_fonts::lucide::{info, octagon_alert, triangle_alert};
 use uuid::Uuid;
+
+use crate::button_custom::button_custom;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WindowType {
@@ -85,13 +87,13 @@ where
     let mut footer: Row<'_, Message, Theme, Renderer> = row![horizontal()].spacing(10).width(Fill);
 
     if window_content.show_okay {
-        footer = footer.push(create_button("Okay", on_okay, |theme| {
+        footer = footer.push(button_custom("Okay", on_okay, |theme| {
             theme.palette().primary
         }));
     }
 
     if window_content.show_cancel {
-        footer = footer.push(create_button("Cancel", on_cancel, |theme| {
+        footer = footer.push(button_custom("Cancel", on_cancel, |theme| {
             theme.palette().danger
         }));
     }
@@ -117,38 +119,4 @@ where
         ..Default::default()
     })
     .into()
-}
-
-fn create_button<'a, Message>(
-    label: &'a str,
-    on_press: Message,
-    // Change this to a closure that picks a color from the theme
-    color_selector: impl Fn(&Theme) -> Color + Copy + 'a,
-) -> iced::widget::Button<'a, Message, Theme, Renderer>
-where
-    Message: Clone + 'a,
-{
-    button(label)
-        .on_press(on_press)
-        .style(move |theme: &Theme, status| {
-            let base_color = color_selector(theme);
-
-            let final_color = match status {
-                iced::widget::button::Status::Hovered => Color {
-                    a: 0.8,
-                    ..base_color
-                },
-                _ => base_color,
-            };
-
-            button::Style {
-                background: Some(final_color.into()),
-                text_color: Color::WHITE,
-                border: Border {
-                    radius: 2.0.into(),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }
-        })
 }

@@ -17,6 +17,16 @@ pub struct DataEntry {
     pub description: String,
 }
 
+impl DataEntry {
+    pub fn new(key: &str, description: &str) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            key: key.to_string(),
+            description: description.to_string(),
+        }
+    }
+}
+
 pub struct AppData {
     pub version: u32,
     pub entries: Vec<DataEntry>,
@@ -81,12 +91,7 @@ impl AppData {
                             cap.name("desc").unwrap().as_str().replace(r"\:", ":"),
                         )
                     }) {
-                        elements.push(DataEntry {
-                            id: Uuid::new_v4(),
-                            key: key.trim().to_string(),
-                            description: desc.trim().to_string(),
-                        });
-                        print!("Loaded entry: key='{}', description='{}'\n", key, desc);
+                        elements.push(DataEntry::new(key.trim(), desc.trim()));
                     } else {
                         WindowManager::global()
                             .lock()

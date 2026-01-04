@@ -5,6 +5,7 @@ use iced::{Color, Element, Renderer, Task, Theme, font};
 use iced::{Fill, Length};
 use iced_fonts::LUCIDE_FONT_BYTES;
 
+use crate::entry_component::entry_component;
 use crate::theme;
 use crate::utils::{AppData, DataEntry};
 use crate::window_component::{WindowContent, WindowType, custom_window};
@@ -178,8 +179,18 @@ impl App {
     }
 
     fn get_main_view(&self) -> Element<'_, AppMessage> {
+        let entry = entry_component(
+            self.app_data
+                .entries
+                .first()
+                .unwrap_or(&DataEntry::new("aaa", "bbb"))
+                .clone(),
+            AppMessage::None,
+            AppMessage::None,
+        );
         center(
             column![
+                entry,
                 text("Hello, World!").size(50),
                 button("Open Window").on_press(AppMessage::OpenWindow(WindowContent::new(
                     WindowType::AddEntry,

@@ -1,4 +1,7 @@
 mod app;
+mod button_custom;
+mod divider_component;
+mod entry_component;
 mod theme;
 mod utils;
 mod window_component;
