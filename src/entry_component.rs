@@ -1,5 +1,7 @@
 use iced::Alignment::Center;
-use iced::widget::{button, container, row, text};
+use iced::Length::{FillPortion, Shrink};
+use iced::widget::space::horizontal;
+use iced::widget::{container, row, text};
 use iced::{Element, Theme};
 use iced_fonts::lucide::{delete, pen};
 
@@ -8,7 +10,7 @@ use crate::divider_component::divider_component;
 use crate::utils::DataEntry;
 
 pub fn entry_component<'a, Message>(
-    entry: DataEntry,
+    entry: &DataEntry,
     on_delete: Message,
     on_edit: Message,
 ) -> Element<'a, Message>
@@ -17,12 +19,19 @@ where
 {
     container(
         row![
-            text(entry.key),
+            container(text(entry.key.clone())).width(FillPortion(1)),
             divider_component(30),
-            text(entry.description),
+            container(text(entry.description.clone())).width(FillPortion(8)),
             divider_component(30),
-            button_custom(pen(), on_edit, |theme: &Theme| theme.palette().primary),
-            button_custom(delete(), on_delete, |theme: &Theme| theme.palette().danger),
+            container(
+                row![
+                    button_custom(pen(), on_edit, |theme: &Theme| theme.palette().primary),
+                    horizontal(),
+                    button_custom(delete(), on_delete, |theme: &Theme| theme.palette().danger),
+                ]
+                .spacing(10)
+            )
+            .width(Shrink)
         ]
         .spacing(10)
         .align_y(Center),

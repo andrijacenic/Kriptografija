@@ -1,9 +1,10 @@
 use iced::Alignment::Center;
-use iced::widget::{button, center, column, container, row, text, text_input};
+use iced::widget::{Column, button, center, column, container, row, text, text_input};
 use iced::widget::{opaque, stack};
 use iced::{Color, Element, Renderer, Task, Theme, font};
 use iced::{Fill, Length};
 use iced_fonts::LUCIDE_FONT_BYTES;
+use uuid::Uuid;
 
 use crate::entry_component::entry_component;
 use crate::theme;
@@ -24,6 +25,8 @@ pub enum AppMessage {
     AddEntry((DataEntry, Option<WindowContent>)),
     InputChange(InputChangeType, String),
     SaveAppData,
+    DeleteEntry((DataEntry, bool)),
+    EditEntry(DataEntry),
     None,
 }
 
@@ -99,6 +102,38 @@ impl App {
                     }
                 }
                 Task::none()
+            }
+            AppMessage::DeleteEntry((entry, checked)) => {
+                if let Some(pos) = self.app_data.entries.iter().position(|x| x.id == entry.id) {
+                    if checked {
+                        self.app_data.entries.remove(pos);
+                        Task::none()
+                    } else {
+                        Task::done(AppMessage::OpenWindow(WindowContent::new(
+                            WindowType::Warning,
+                            "Delete entry?".to_string(),
+                            "Warning deleting an entry is not reversable!".to_string(),
+                            None,
+                            true,
+                            true,
+                        )))
+                    }
+                } else {
+                    Task::none()
+                }
+            }
+            AppMessage::EditEntry(entry) => {
+                self.editing_id = Some(entry.id);
+                self.key_input_value = entry.key;
+                self.decription_input_value = entry.description;
+                Task::done(AppMessage::OpenWindow(WindowContent::new(
+                    WindowType::EntryEditor,
+                    "Edit Entry".to_string(),
+                    String::new(),
+                    Some(600),
+                    true,
+                    true,
+                )))
             }
             AppMessage::AddEntry((entry, window_content)) => {
                 if let Some(existing_entry) = self
@@ -179,39 +214,24 @@ impl App {
     }
 
     fn get_main_view(&self) -> Element<'_, AppMessage> {
-        let entry = entry_component(
-            self.app_data
-                .entries
-                .first()
-                .unwrap_or(&DataEntry::new("aaa", "bbb"))
-                .clone(),
-            AppMessage::None,
-            AppMessage::None,
-        );
-        center(
-            column![
+        let mut entries_column: Column<AppMessage, Theme, Renderer> = column![];
+
+        for entry in &self.app_data.entries {
+            entries_column = entries_column.push(entry_component(
                 entry,
-                text("Hello, World!").size(50),
-                button("Open Window").on_press(AppMessage::OpenWindow(WindowContent::new(
-                    WindowType::AddEntry,
-                    "Add Entry".to_string(),
-                    "Add entry".to_string(),
-                    Some(600),
-                    true,
-                    true,
-                ))),
-                button("Save File").on_press(AppMessage::SaveAppData)
-            ]
-            .spacing(20),
-        )
-        .into()
+                AppMessage::DeleteEntry((entry.clone(), false)),
+                AppMessage::EditEntry(entry.clone()),
+            ));
+        }
+
+        entries_column.padding(20).into()
     }
 
     fn get_window_view(&self) -> Option<Element<'_, AppMessage>> {
         let window_manager = WindowManager::global().lock().unwrap();
         if let Some(window_content) = window_manager.get_window() {
             let (custom_body, on_okay): (Option<Element<'_, AppMessage>>, Option<AppMessage>) =
-                if let WindowType::AddEntry = window_content.window_type {
+                if let WindowType::EntryEditor = window_content.window_type {
                     (
                         Some(self.create_entity_add_window_body()),
                         if self.is_data_entry_valid() {

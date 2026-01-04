@@ -15,7 +15,7 @@ pub enum WindowType {
     Info,
     Warning,
     Error,
-    AddEntry,
+    EntryEditor,
 }
 
 #[derive(Debug, Clone)]
