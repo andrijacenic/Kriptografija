@@ -1,6 +1,32 @@
 1
-Store:A beautiful store, it was never seen before. A beautiful store, it was never seen before. A beautiful store, it was never seen before. A beautiful store, it was never seen before. A beautiful store, it was never seen before. A beautiful store, it was never seen before. A beautiful store, it was never seen before. A beautiful store, it was never seen before. A beautiful store, it was never seen before.
-Golden labubu:The golden labubu is in the Yike store that was transformed from Simpo.
-Kikiriki:Jeftin kikiriki u centar \:.
-Sta je sad ovo:Evo opis celog ovog novog
-Evo novog kljuca:Opis ovog novog kljuca
+Keys : In the wooden bowl on the hallway console table.
+Passport : Inside the fireproof safe in the master bedroom closet.
+Phone Charger : Plugged into the outlet behind the living room sofa.
+Umbrella : Hanging on the hook behind the front door.
+Flashlight : Second drawer down in the kitchen island. Second drawer down in the kitchen island. Second drawer down in the kitchen island. Second drawer down in the kitchen island. Second drawer down in the kitchen island. Second drawer down in the kitchen island. Second drawer down in the kitchen island. Second drawer down in the kitchen island. Second drawer down in the kitchen island. Second drawer down in the kitchen island. Second drawer down in the kitchen island. 
+Batteries : In a plastic container on the top shelf of the pantry.
+Spare Bulb : In the utility box under the bathroom sink.
+First Aid Kit : Upper cabinet in the laundry room, labeled with a red cross.
+Wrench : Hanging on the pegboard in the garage above the workbench.
+Vaccination Records : Blue folder in the bottom drawer of the filing cabinet.
+Hardware Token : Attached to the black lanyard in the top desk drawer.
+Recovery Seed : Embossed on a metal plate hidden under the floorboard.
+Encrypted Drive : Inside the false-bottom compartment of the briefcase.
+Backup Tape : Off-site storage locker at the secondary data center.
+RSA Private Key : Stored on the air-gapped laptop in the server room vault.
+YubiKey : Currently plugged into the side port of the workstation.
+Paper Codebook : Behind the third book from the left on the library shelf.
+Soldering Iron : In the grey toolbox under the electronics bench.
+Multimeter : Protective case on the middle shelf of the workshop.
+Safety Goggles : Hanging on the wire rack next to the drill press.
+Drill Bits : Indexed metal case inside the bottom tool chest drawer.
+WD-40 : On the chemical shelf in the garage, near the cleaning supplies.
+Stapler : Top right corner of the main office desk.
+Notebook : Stacked on the shelf above the printer.
+Envelopes : Vertical organizer in the home office closet.
+Ink Cartridges : In the original packaging inside the printer cabinet.
+Scissors : In the ceramic pen holder next to the monitor.
+Bicycle Pump : Clipped to the frame of the mountain bike in the shed.
+Gardening Gloves : In the wicker basket on the back porch.
+Lawnmower Key : Magnetic box hidden under the deck railing.
+Bird Seed : Large galvanized bin in the corner of the garden shed.

@@ -185,6 +185,7 @@ impl App {
                 } else {
                     self.app_data.entries.push(entry);
                 }
+                self.search_entries();
                 Task::done(AppMessage::CloseWindow((window_content, true)))
             }
             AppMessage::InputChange(input_type, value) => {
@@ -193,34 +194,7 @@ impl App {
                     InputChangeType::Description => self.decription_input_value = value,
                     InputChangeType::Search => {
                         self.search_input_value = value;
-
-                        if self.search_input_value.is_empty() {
-                            self.entries_sorted = self.app_data.entries.clone();
-                        } else {
-                            let matcher = SkimMatcherV2::default();
-
-                            let mut matches: Vec<(i64, &DataEntry)> = self
-                                .app_data
-                                .entries
-                                .iter()
-                                .filter_map(|entry| {
-                                    let key_score =
-                                        matcher.fuzzy_match(&entry.key, &self.search_input_value);
-                                    let desc_score = matcher
-                                        .fuzzy_match(&entry.description, &self.search_input_value);
-
-                                    let final_score = key_score.max(desc_score);
-                                    final_score.map(|score| (score, entry))
-                                })
-                                .collect();
-
-                            matches.sort_by(|a, b| b.0.cmp(&a.0));
-
-                            self.entries_sorted = matches
-                                .into_iter()
-                                .map(|(_, entry)| entry.clone())
-                                .collect();
-                        }
+                        self.search_entries();
                     }
                 }
                 Task::none()
@@ -469,5 +443,34 @@ impl App {
 
     fn is_data_entry_valid(&self) -> bool {
         self.is_key_input_valid() && self.is_description_input_valid()
+    }
+
+    fn search_entries(&mut self) {
+        if self.search_input_value.is_empty() {
+            self.entries_sorted = self.app_data.entries.clone();
+        } else {
+            let matcher = SkimMatcherV2::default();
+
+            let mut matches: Vec<(i64, &DataEntry)> = self
+                .app_data
+                .entries
+                .iter()
+                .filter_map(|entry| {
+                    let key_score = matcher.fuzzy_match(&entry.key, &self.search_input_value);
+                    let desc_score =
+                        matcher.fuzzy_match(&entry.description, &self.search_input_value);
+
+                    let final_score = key_score.max(desc_score);
+                    final_score.map(|score| (score, entry))
+                })
+                .collect();
+
+            matches.sort_by(|a, b| b.0.cmp(&a.0));
+
+            self.entries_sorted = matches
+                .into_iter()
+                .map(|(_, entry)| entry.clone())
+                .collect();
+        }
     }
 }
