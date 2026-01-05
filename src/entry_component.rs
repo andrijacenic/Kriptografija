@@ -20,12 +20,16 @@ where
     container(
         row![
             container(text(entry.key.clone())).width(FillPortion(2)),
-            divider(30),
+            divider(1),
             container(text(entry.description.clone())).width(FillPortion(8)),
-            divider(30),
+            divider(1),
             container(
                 row![
-                    custom_button(pen(), on_edit, |theme: &Theme| theme.palette().primary),
+                    custom_button(pen(), on_edit, |theme: &Theme| theme
+                        .extended_palette()
+                        .secondary
+                        .base
+                        .color),
                     horizontal(),
                     custom_button(delete(), on_delete, |theme: &Theme| theme.palette().danger),
                 ]
