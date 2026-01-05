@@ -143,6 +143,7 @@ impl App {
                     if checked {
                         self.window_manager.remove_window();
                         self.app_data.entries.remove(pos);
+                        self.search_entries();
                         Task::none()
                     } else {
                         Task::done(AppMessage::OpenWindow(WindowContent::new(
