@@ -1,6 +1,6 @@
 use iced::{Border, Color, Element, Renderer, Theme, widget::button};
 
-pub fn button_custom<'a, Message>(
+pub fn custom_button<'a, Message>(
     label: impl Into<Element<'a, Message, Theme, Renderer>>,
     on_press: Message,
     color_selector: impl Fn(&Theme) -> Color + Copy + 'a,

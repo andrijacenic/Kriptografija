@@ -2,7 +2,7 @@ use iced::Length;
 use iced::widget::{container, row};
 use iced::{Element, Theme};
 
-pub fn divider_component<'a, Message>(lenght: impl Into<Length>) -> Element<'a, Message>
+pub fn divider<'a, Message>(lenght: impl Into<Length>) -> Element<'a, Message>
 where
     Message: 'a,
 {

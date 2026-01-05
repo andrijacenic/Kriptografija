@@ -2,6 +2,10 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Result};
 use std::path::Path;
 
+use iced::window::Icon;
+use iced::window::icon::from_rgba;
+use image::error::DecodingError;
+use image::{GenericImageView, ImageError, ImageResult};
 use regex::Regex;
 use uuid::Uuid;
 
@@ -201,5 +205,26 @@ where
         };
 
         Ok(())
+    }
+}
+
+pub fn load_icon() -> ImageResult<Icon> {
+    let icon_bytes = include_bytes!("../assets/icon.png");
+
+    let image = image::load_from_memory(icon_bytes);
+    match image {
+        Ok(image) => {
+            let (width, height) = image.dimensions();
+            let rgba = image.to_rgba8();
+
+            match from_rgba(rgba.into_raw().into(), width, height) {
+                Ok(icon) => Ok(icon),
+                Err(error) => Err(ImageError::Decoding(DecodingError::new(
+                    image::error::ImageFormatHint::Unknown,
+                    error,
+                ))),
+            }
+        }
+        Err(error) => Err(error),
     }
 }

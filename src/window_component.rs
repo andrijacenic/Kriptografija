@@ -10,7 +10,7 @@ use iced_aw::{card, style};
 use iced_fonts::lucide::{info, octagon_alert, triangle_alert};
 use uuid::Uuid;
 
-use crate::button_custom::button_custom;
+use crate::custom_button_component::custom_button;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WindowType {
@@ -86,19 +86,19 @@ where
     let body_content = if let Some(body_elem) = body {
         body_elem.into()
     } else {
-        text(window_content.content).size(20).into()
+        text(window_content.content).size(16).into()
     };
 
     let mut footer: Row<'_, Message, Theme, Renderer> = row![horizontal()].spacing(10).width(Fill);
 
     if window_content.show_okay {
-        footer = footer.push(button_custom("Okay", on_okay, |theme| {
+        footer = footer.push(custom_button("Okay", on_okay, |theme| {
             theme.palette().primary
         }));
     }
 
     if window_content.show_cancel {
-        footer = footer.push(button_custom("Cancel", on_cancel, |theme| {
+        footer = footer.push(custom_button("Cancel", on_cancel, |theme| {
             theme.palette().danger
         }));
     }

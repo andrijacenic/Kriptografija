@@ -1,24 +1,38 @@
 mod app;
-mod button_custom;
+mod custom_button_component;
 mod divider_component;
 mod entry_component;
+mod menu_button_component;
+mod search_component;
 mod theme;
 mod utils;
 mod window_component;
 mod window_manager;
 
 use app::App;
+use iced::window::Settings;
 
-use crate::theme::APP_TITLE;
+use crate::{theme::APP_TITLE, utils::load_icon};
 use iced_aw::ICED_AW_FONT_BYTES;
 
 pub fn main() -> iced::Result {
     iced::application(App::new, App::update, App::view)
         .theme(App::theme)
         .font(ICED_AW_FONT_BYTES)
-        .resizable(true)
+        .window(Settings {
+            min_size: Some((400, 200).into()),
+            size: (700, 800).into(),
+            icon: match load_icon() {
+                Ok(icon) => Some(icon),
+                Err(error) => {
+                    println!("{:?}", error);
+                    None
+                }
+            },
+            resizable: true,
+            ..Default::default()
+        })
         .centered()
-        .window_size((1200, 800))
         .title(APP_TITLE)
         .run()
 }

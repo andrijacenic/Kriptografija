@@ -5,11 +5,11 @@ use iced::widget::{container, row, text};
 use iced::{Element, Theme};
 use iced_fonts::lucide::{delete, pen};
 
-use crate::button_custom::button_custom;
-use crate::divider_component::divider_component;
+use crate::custom_button_component::custom_button;
+use crate::divider_component::divider;
 use crate::utils::DataEntry;
 
-pub fn entry_component<'a, Message>(
+pub fn entry<'a, Message>(
     entry: &DataEntry,
     on_delete: Message,
     on_edit: Message,
@@ -20,14 +20,14 @@ where
     container(
         row![
             container(text(entry.key.clone())).width(FillPortion(2)),
-            divider_component(30),
+            divider(30),
             container(text(entry.description.clone())).width(FillPortion(8)),
-            divider_component(30),
+            divider(30),
             container(
                 row![
-                    button_custom(pen(), on_edit, |theme: &Theme| theme.palette().primary),
+                    custom_button(pen(), on_edit, |theme: &Theme| theme.palette().primary),
                     horizontal(),
-                    button_custom(delete(), on_delete, |theme: &Theme| theme.palette().danger),
+                    custom_button(delete(), on_delete, |theme: &Theme| theme.palette().danger),
                 ]
                 .spacing(10)
             )

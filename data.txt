@@ -3,3 +3,4 @@ Store:A beautiful store, it was never seen before. A beautiful store, it was nev
 Golden labubu:The golden labubu is in the Yike store that was transformed from Simpo.
 Kikiriki:Jeftin kikiriki u centar \:.
 Sta je sad ovo:Evo opis celog ovog novog
+Evo novog kljuca:Opis ovog novog kljuca

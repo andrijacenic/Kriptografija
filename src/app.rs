@@ -1,12 +1,16 @@
 use iced::Alignment::Center;
-use iced::widget::space::horizontal;
-use iced::widget::{Column, button, column, container, row, text, text_input};
+use iced::alignment::{Horizontal, Vertical};
+use iced::border::radius;
+use iced::widget::{Column, button, column, container, row, scrollable, text, text_input};
 use iced::widget::{opaque, stack};
-use iced::{Color, Element, Renderer, Task, Theme, font};
+use iced::{Border, Color, Element, Renderer, Task, Theme, font};
 use iced::{Fill, Length};
+use iced_aw::{Menu, menu_bar, menu_items};
 use iced_fonts::LUCIDE_FONT_BYTES;
+use iced_fonts::lucide::plus;
 
-use crate::entry_component::entry_component;
+use crate::entry_component::entry;
+use crate::menu_button_component::menu_button;
 use crate::theme;
 use crate::utils::{AppData, DataEntry};
 use crate::window_component::{WindowContent, WindowType, custom_window};
@@ -28,6 +32,7 @@ pub enum AppMessage {
     DeleteEntry((DataEntry, bool)),
     EditEntry(DataEntry),
     AddNewEntry,
+    ExitApp(bool),
     None,
 }
 
@@ -192,7 +197,7 @@ impl App {
                         "Data saved!".to_string(),
                         "Data saved successfully.".to_string(),
                         None,
-                        true,
+                        false,
                         true,
                         None,
                     )),
@@ -208,16 +213,33 @@ impl App {
                 }
                 Task::none()
             }
+            AppMessage::ExitApp(value) => {
+                if value {
+                    iced::exit()
+                } else {
+                    Task::done(AppMessage::OpenWindow(WindowContent::new(
+                        WindowType::Warning,
+                        "Leaving soo soon?".to_string(),
+                        "Exit the app?\nIf you didn't save the data it will be lost.".to_string(),
+                        None,
+                        true,
+                        true,
+                        Some(AppMessage::ExitApp(true)),
+                    )))
+                }
+            }
             AppMessage::None => Task::none(),
         }
     }
 
     // The UI layout
     pub fn view(&self) -> Element<'_, AppMessage> {
-        let main_content = self.get_main_view();
-
-        let mut layers: Vec<Element<AppMessage, Theme, Renderer>> =
-            vec![container(main_content).width(Fill).height(Fill).into()];
+        let mut layers: Vec<Element<AppMessage, Theme, Renderer>> = vec![
+            container(self.get_main_view())
+                .width(Fill)
+                .height(Fill)
+                .into(),
+        ];
 
         if let Some(window) = self.get_window_view() {
             layers.push(opaque(window));
@@ -231,26 +253,73 @@ impl App {
     }
 
     fn get_main_view(&self) -> Element<'_, AppMessage> {
-        let mut entries_column: Column<AppMessage, Theme, Renderer> = column![];
+        let mut entries_column: Column<AppMessage, Theme, Renderer> =
+            column![].spacing(10).padding(20);
 
-        for entry in &self.app_data.entries {
-            entries_column = entries_column.push(entry_component(
-                entry,
-                AppMessage::DeleteEntry((entry.clone(), false)),
-                AppMessage::EditEntry(entry.clone()),
+        for e in &self.app_data.entries {
+            entries_column = entries_column.push(entry(
+                e,
+                AppMessage::DeleteEntry((e.clone(), false)),
+                AppMessage::EditEntry(e.clone()),
             ));
         }
-        entries_column
-            .push(
-                row![
-                    horizontal(),
-                    button("Add").on_press(AppMessage::AddNewEntry),
-                    button("Save").on_press(AppMessage::SaveAppData)
-                ]
-                .spacing(10),
-            )
-            .spacing(10)
-            .padding(20)
+        let add_button = container(button(plus()).on_press(AppMessage::AddNewEntry))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Horizontal::Right)
+            .align_y(Vertical::Bottom)
+            .padding(15);
+        let layers: Vec<Element<AppMessage, Theme, Renderer>> = vec![
+            column![self.get_menus(), scrollable(entries_column)].into(),
+            add_button.into(),
+        ];
+        stack(layers).width(Fill).height(Fill).into()
+    }
+
+    fn get_menus(&self) -> Element<'_, AppMessage> {
+        let menu_tpl = |items| {
+            Menu::new(items)
+                .width(150.0)
+                .offset(5.0)
+                .spacing(5.0)
+                .close_on_item_click(true)
+                .close_on_background_click(true)
+        };
+
+        // Build the Menu Bar
+        let mb = menu_bar!(
+            (
+                menu_button(text("File")).on_press(AppMessage::None),
+                menu_tpl(menu_items!(
+                    (menu_button(text("Save").width(Length::Fill))
+                        .on_press(AppMessage::SaveAppData)),
+                    (menu_button(text("Exit").width(Length::Fill))
+                        .on_press(AppMessage::ExitApp(false))),
+                ))
+            ),
+            (menu_button(text("Info")).on_press(AppMessage::OpenWindow(WindowContent::new(
+                WindowType::Info,
+                "Info".to_string(),
+                "Developed by: Andrija Cenić (1910)\nProject: Cryptography Course.".to_string(),
+                None,
+                false,
+                true,
+                None
+            ))))
+        );
+
+        container(mb)
+            .style(|theme: &Theme| container::Style {
+                border: Border {
+                    radius: radius(0),
+                    width: 1.0,
+                    color: theme.extended_palette().background.strongest.color,
+                    ..Border::default()
+                },
+                ..Default::default()
+            })
+            .padding(1)
+            .width(Length::Fill)
             .into()
     }
 
