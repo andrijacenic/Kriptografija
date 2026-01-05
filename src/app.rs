@@ -450,7 +450,7 @@ impl App {
         if self.search_input_value.is_empty() {
             self.entries_sorted = self.app_data.entries.clone();
         } else {
-            let matcher = SkimMatcherV2::default();
+            let matcher = SkimMatcherV2::default().ignore_case();
 
             let mut matches: Vec<(i64, &DataEntry)> = self
                 .app_data
@@ -461,8 +461,13 @@ impl App {
                     let desc_score =
                         matcher.fuzzy_match(&entry.description, &self.search_input_value);
 
+                    let threshold = 60;
+
                     let final_score = key_score.max(desc_score);
-                    final_score.map(|score| (score, entry))
+
+                    final_score
+                        .filter(|&score| score > threshold)
+                        .map(|score| (score, entry))
                 })
                 .collect();
 
