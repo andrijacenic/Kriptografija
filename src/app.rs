@@ -1,9 +1,11 @@
+use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use iced::Alignment::Center;
 use iced::alignment::{Horizontal, Vertical};
 use iced::border::radius;
 use iced::widget::{Column, button, column, container, row, scrollable, text, text_input};
 use iced::widget::{opaque, stack};
-use iced::{Border, Color, Element, Renderer, Task, Theme, font};
+use iced::{Border, Element, Renderer, Task, Theme, font};
 use iced::{Fill, Length};
 use iced_aw::{Menu, menu_bar, menu_items};
 use iced_fonts::LUCIDE_FONT_BYTES;
@@ -11,6 +13,7 @@ use iced_fonts::lucide::plus;
 
 use crate::entry_component::entry;
 use crate::menu_button_component::menu_button;
+use crate::search_component::search;
 use crate::theme;
 use crate::utils::{AppData, DataEntry};
 use crate::window_component::{WindowContent, WindowType, custom_window};
@@ -20,6 +23,7 @@ use crate::window_manager::WindowManager;
 pub enum InputChangeType {
     Key,
     Description,
+    Search,
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +47,8 @@ pub struct App {
     editing_id: Option<uuid::Uuid>,
     key_input_value: String,
     decription_input_value: String,
+    search_input_value: String,
+    entries_sorted: Vec<DataEntry>,
 }
 
 impl App {
@@ -80,7 +86,7 @@ impl App {
             }),
             init_task,
         ]);
-
+        let entries_sorted = app_data.entries.clone();
         (
             Self {
                 app_data,
@@ -89,6 +95,8 @@ impl App {
                 editing_id: None,
                 key_input_value: String::new(),
                 decription_input_value: String::new(),
+                search_input_value: String::new(),
+                entries_sorted,
             },
             combined_tasks,
         )
@@ -122,7 +130,7 @@ impl App {
                 self.decription_input_value = String::new();
                 Task::done(AppMessage::OpenWindow(WindowContent::new(
                     WindowType::EntryEditor,
-                    "Edit Entry".to_string(),
+                    "Add Entry".to_string(),
                     String::new(),
                     Some(600),
                     true,
@@ -181,11 +189,38 @@ impl App {
             }
             AppMessage::InputChange(input_type, value) => {
                 match input_type {
-                    InputChangeType::Key => {
-                        self.key_input_value = value;
-                    }
-                    InputChangeType::Description => {
-                        self.decription_input_value = value;
+                    InputChangeType::Key => self.key_input_value = value,
+                    InputChangeType::Description => self.decription_input_value = value,
+                    InputChangeType::Search => {
+                        self.search_input_value = value;
+
+                        if self.search_input_value.is_empty() {
+                            self.entries_sorted = self.app_data.entries.clone();
+                        } else {
+                            let matcher = SkimMatcherV2::default();
+
+                            let mut matches: Vec<(i64, &DataEntry)> = self
+                                .app_data
+                                .entries
+                                .iter()
+                                .filter_map(|entry| {
+                                    let key_score =
+                                        matcher.fuzzy_match(&entry.key, &self.search_input_value);
+                                    let desc_score = matcher
+                                        .fuzzy_match(&entry.description, &self.search_input_value);
+
+                                    let final_score = key_score.max(desc_score);
+                                    final_score.map(|score| (score, entry))
+                                })
+                                .collect();
+
+                            matches.sort_by(|a, b| b.0.cmp(&a.0));
+
+                            self.entries_sorted = matches
+                                .into_iter()
+                                .map(|(_, entry)| entry.clone())
+                                .collect();
+                        }
                     }
                 }
                 Task::none()
@@ -254,9 +289,13 @@ impl App {
 
     fn get_main_view(&self) -> Element<'_, AppMessage> {
         let mut entries_column: Column<AppMessage, Theme, Renderer> =
-            column![].spacing(10).padding(20);
+            column![search(self.search_input_value.as_str(), |value| {
+                AppMessage::InputChange(InputChangeType::Search, value)
+            })]
+            .spacing(10)
+            .padding(20);
 
-        for e in &self.app_data.entries {
+        for e in &self.entries_sorted {
             entries_column = entries_column.push(entry(
                 e,
                 AppMessage::DeleteEntry((e.clone(), false)),
@@ -378,14 +417,14 @@ impl App {
         let label_width = Length::Fixed(85.0);
 
         column![
-            text("Add an entry below").size(20),
+            text("Add an entry below").size(16),
             row![
-                container(text("Key").width(label_width).align_y(Center)).padding(5),
+                container(text("Key").size(16).width(label_width).align_y(Center)).padding(5),
                 text_input("Key", self.key_input_value.as_str())
                     .style(|theme, status| {
                         let mut style = iced::widget::text_input::default(theme, status);
                         if !self.is_key_input_valid() {
-                            style.border.color = Color::from_rgb(0.8, 0.0, 0.0); // Red border
+                            style.border.color = theme.palette().danger;
                             style.border.width = 1.0;
                         }
                         style
@@ -394,12 +433,18 @@ impl App {
             ]
             .spacing(10),
             row![
-                container(text("Description").width(label_width).align_y(Center)).padding(5),
+                container(
+                    text("Description")
+                        .size(16)
+                        .width(label_width)
+                        .align_y(Center)
+                )
+                .padding(5),
                 text_input("Description", self.decription_input_value.as_str())
                     .style(|theme, status| {
                         let mut style = iced::widget::text_input::default(theme, status);
                         if !self.is_description_input_valid() {
-                            style.border.color = Color::from_rgb(0.8, 0.0, 0.0); // Red border
+                            style.border.color = theme.palette().danger;
                             style.border.width = 1.0;
                         }
                         style
