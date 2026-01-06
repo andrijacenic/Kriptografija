@@ -3,7 +3,9 @@ use fuzzy_matcher::skim::SkimMatcherV2;
 use iced::Alignment::Center;
 use iced::alignment::{Horizontal, Vertical};
 use iced::border::radius;
-use iced::widget::{Column, button, column, container, row, scrollable, text, text_input};
+use iced::widget::{
+    Column, button, column, combo_box, container, row, scrollable, text, text_input,
+};
 use iced::widget::{opaque, stack};
 use iced::{Border, Element, Renderer, Task, Theme, font};
 use iced::{Fill, Length};
@@ -19,11 +21,17 @@ use crate::utils::{AppData, DataEntry};
 use crate::window_component::{WindowContent, WindowType, custom_window};
 use crate::window_manager::WindowManager;
 
-#[derive(Debug, Clone)]
-pub enum InputChangeType {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InputType {
     Key,
     Description,
     Search,
+}
+
+impl std::fmt::Display for InputType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -31,7 +39,8 @@ pub enum AppMessage {
     OpenWindow(WindowContent<AppMessage>),
     CloseWindow((Option<WindowContent<AppMessage>>, bool)),
     AddEntry((DataEntry, Option<WindowContent<AppMessage>>)),
-    InputChange(InputChangeType, String),
+    InputChange(InputType, String),
+    SearchChange(InputType),
     SaveAppData,
     DeleteEntry((DataEntry, bool)),
     EditEntry(DataEntry),
@@ -49,6 +58,8 @@ pub struct App {
     decription_input_value: String,
     search_input_value: String,
     entries_sorted: Vec<DataEntry>,
+    search_inputs: combo_box::State<InputType>,
+    searched_input: Option<InputType>,
 }
 
 impl App {
@@ -97,6 +108,8 @@ impl App {
                 decription_input_value: String::new(),
                 search_input_value: String::new(),
                 entries_sorted,
+                search_inputs: combo_box::State::new(vec![InputType::Key, InputType::Description]),
+                searched_input: Some(InputType::Key),
             },
             combined_tasks,
         )
@@ -191,13 +204,18 @@ impl App {
             }
             AppMessage::InputChange(input_type, value) => {
                 match input_type {
-                    InputChangeType::Key => self.key_input_value = value,
-                    InputChangeType::Description => self.decription_input_value = value,
-                    InputChangeType::Search => {
+                    InputType::Key => self.key_input_value = value,
+                    InputType::Description => self.decription_input_value = value,
+                    InputType::Search => {
                         self.search_input_value = value;
                         self.search_entries();
                     }
                 }
+                Task::none()
+            }
+            AppMessage::SearchChange(value) => {
+                self.searched_input = Some(value);
+                self.search_entries();
                 Task::none()
             }
             AppMessage::SaveAppData => {
@@ -263,12 +281,15 @@ impl App {
     }
 
     fn get_main_view(&self) -> Element<'_, AppMessage> {
-        let mut entries_column: Column<AppMessage, Theme, Renderer> =
-            column![search(self.search_input_value.as_str(), |value| {
-                AppMessage::InputChange(InputChangeType::Search, value)
-            })]
-            .spacing(10)
-            .padding(20);
+        let mut entries_column: Column<AppMessage, Theme, Renderer> = column![search(
+            self.search_input_value.as_str(),
+            |value| { AppMessage::InputChange(InputType::Search, value) },
+            &self.search_inputs,
+            |value: InputType| AppMessage::SearchChange(value),
+            self.searched_input.as_ref()
+        )]
+        .spacing(10)
+        .padding(20);
 
         for e in &self.entries_sorted {
             entries_column = entries_column.push(entry(
@@ -404,7 +425,7 @@ impl App {
                         }
                         style
                     })
-                    .on_input(|value| { AppMessage::InputChange(InputChangeType::Key, value) })
+                    .on_input(|value| { AppMessage::InputChange(InputType::Key, value) })
             ]
             .spacing(10),
             row![
@@ -424,9 +445,7 @@ impl App {
                         }
                         style
                     })
-                    .on_input(|value| {
-                        AppMessage::InputChange(InputChangeType::Description, value)
-                    })
+                    .on_input(|value| { AppMessage::InputChange(InputType::Description, value) })
             ]
             .spacing(10)
         ]
@@ -457,15 +476,16 @@ impl App {
                 .entries
                 .iter()
                 .filter_map(|entry| {
-                    let key_score = matcher.fuzzy_match(&entry.key, &self.search_input_value);
-                    let desc_score =
-                        matcher.fuzzy_match(&entry.description, &self.search_input_value);
+                    let threshold = 50;
 
-                    let threshold = 60;
+                    let score = match self.searched_input.unwrap() {
+                        InputType::Description => {
+                            matcher.fuzzy_match(&entry.description, &self.search_input_value)
+                        }
+                        _ => matcher.fuzzy_match(&entry.key, &self.search_input_value),
+                    };
 
-                    let final_score = key_score.max(desc_score);
-
-                    final_score
+                    score
                         .filter(|&score| score > threshold)
                         .map(|score| (score, entry))
                 })

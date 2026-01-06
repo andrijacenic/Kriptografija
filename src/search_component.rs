@@ -1,18 +1,23 @@
 use iced::{
     Alignment::Center,
     Border, Element,
-    Length::Fill,
+    Length::{Fill, FillPortion},
     Theme,
-    widget::{container, row, text_input},
+    widget::{combo_box, container, row, text_input},
 };
 use iced_fonts::lucide;
+use std::fmt::Display;
 
-pub fn search<'a, Message>(
+pub fn search<'a, Message, ComboBoxState>(
     value: &str,
     on_input: impl Fn(String) -> Message + 'a,
+    state: &'a combo_box::State<ComboBoxState>,
+    on_selected: impl Fn(ComboBoxState) -> Message + 'a + 'static,
+    selected: Option<&ComboBoxState>,
 ) -> Element<'a, Message>
 where
     Message: Clone + 'a,
+    ComboBoxState: Display + Clone + 'a + 'static,
 {
     container(row![
         container(lucide::search())
@@ -28,7 +33,10 @@ where
                 },
                 ..Default::default()
             }),
-        text_input("Search", value).on_input(on_input)
+        text_input("Search", value)
+            .on_input(on_input)
+            .width(FillPortion(6)),
+        combo_box(state, "Select", selected, on_selected).width(FillPortion(2))
     ])
     .width(Fill)
     .into()
