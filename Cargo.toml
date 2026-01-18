@@ -1,6 +1,6 @@
 [package]
 name = "src"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
@@ -11,6 +11,7 @@ iced_aw = { version = "0.13.0", features = ["full"] }
 iced_fonts = { version = "0.3.0", features = ["full"] }
 fuzzy-matcher = "0.3"
 image = "0.25.9"
+rfd = "0.17.2"
 
 [target.x86_64-pc-windows-gnu]
 linker = "x86_64-w64-mingw32-gcc"

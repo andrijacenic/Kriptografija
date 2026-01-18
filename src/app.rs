@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use iced::Alignment::Center;
@@ -41,11 +43,14 @@ pub enum AppMessage {
     AddEntry((DataEntry, Option<WindowContent<AppMessage>>)),
     InputChange(InputType, String),
     SearchChange(InputType),
-    SaveAppData,
+    SaveAppData(bool),
+    SaveTo(String),
     DeleteEntry((DataEntry, bool)),
     EditEntry(DataEntry),
     AddNewEntry,
     ExitApp(bool),
+    OpenFile(bool),
+    FileSelected(PathBuf),
     None,
 }
 
@@ -218,8 +223,41 @@ impl App {
                 self.search_entries();
                 Task::none()
             }
-            AppMessage::SaveAppData => {
-                match self.app_data.save_file("data.txt".to_string()) {
+            AppMessage::SaveAppData(save_as) => {
+                if save_as {
+                    Task::perform(
+                        async {
+                            rfd::AsyncFileDialog::new()
+                                .set_title("Save Your File")
+                                .add_filter("Text", &["txt"])
+                                .set_file_name("untitled.rs")
+                                .save_file()
+                                .await
+                                .map(|handle| handle.path().to_path_buf())
+                        },
+                        |path_buf: Option<PathBuf>| {
+                            if let Some(path_buf) = path_buf {
+                                return AppMessage::SaveTo(
+                                    path_buf.to_str().unwrap_or("").to_string(),
+                                );
+                            }
+                            AppMessage::OpenWindow(WindowContent::new(
+                                WindowType::Error,
+                                "Access Error".to_string(),
+                                "There was an error accessing files!".to_string(),
+                                None,
+                                false,
+                                true,
+                                None,
+                            ))
+                        },
+                    )
+                } else {
+                    Task::done(AppMessage::SaveTo("data.txt".to_string()))
+                }
+            }
+            AppMessage::SaveTo(path) => {
+                match self.app_data.save_file(path) {
                     Ok(_) => self.window_manager.add_window(WindowContent::new(
                         WindowType::Info,
                         "Data saved!".to_string(),
@@ -240,6 +278,73 @@ impl App {
                     )),
                 }
                 Task::none()
+            }
+            AppMessage::OpenFile(checked) => {
+                if checked {
+                    Task::perform(
+                        async {
+                            rfd::AsyncFileDialog::new()
+                                .set_title("Open a File")
+                                .add_filter("Text Files", &["txt"])
+                                .pick_file()
+                                .await
+                                .map(|handle| handle.path().to_path_buf())
+                        },
+                        |path_buf: Option<PathBuf>| {
+                            if let Some(path_buf) = path_buf {
+                                return AppMessage::FileSelected(path_buf);
+                            }
+                            AppMessage::OpenWindow(WindowContent::new(
+                                WindowType::Error,
+                                "Access Error".to_string(),
+                                "There was an error accessing files!".to_string(),
+                                None,
+                                false,
+                                true,
+                                None,
+                            ))
+                        },
+                    )
+                } else {
+                    Task::done(AppMessage::OpenWindow(WindowContent::new(
+                        WindowType::Warning,
+                        "If data not saved it will be lost!".to_string(),
+                        "Warning if data was not saved it will be lost!".to_string(),
+                        None,
+                        true,
+                        true,
+                        Some(AppMessage::OpenFile(true)),
+                    )))
+                }
+            }
+            AppMessage::FileSelected(path_buf) => {
+                if let Some(path_str) = path_buf.to_str() {
+                    let load_result = self.app_data.load_file(path_str.to_string());
+                    let res = match load_result {
+                        Err(e) => AppMessage::OpenWindow(WindowContent::new(
+                            WindowType::Error,
+                            "Error loading file!".to_string(),
+                            format!("There was an error while loading file: {:?}", e),
+                            None,
+                            false,
+                            true,
+                            None,
+                        )),
+                        Ok(_) => AppMessage::CloseWindow((None, false)),
+                    };
+                    self.search_entries();
+                    Task::done(res)
+                } else {
+                    Task::done(AppMessage::OpenWindow(WindowContent::new(
+                        WindowType::Error,
+                        "Error loading file!".to_string(),
+                        "There was an error while loading file!".to_string(),
+                        None,
+                        false,
+                        true,
+                        Some(AppMessage::CloseWindow((None, false))),
+                    )))
+                }
             }
             AppMessage::ExitApp(value) => {
                 if value {
@@ -326,8 +431,12 @@ impl App {
             (
                 menu_button(text("File")).on_press(AppMessage::None),
                 menu_tpl(menu_items!(
+                    (menu_button(text("Open").width(Length::Fill))
+                        .on_press(AppMessage::OpenFile(false))),
                     (menu_button(text("Save").width(Length::Fill))
-                        .on_press(AppMessage::SaveAppData)),
+                        .on_press(AppMessage::SaveAppData(false))),
+                    (menu_button(text("Save As").width(Length::Fill))
+                        .on_press(AppMessage::SaveAppData(true))),
                     (menu_button(text("Exit").width(Length::Fill))
                         .on_press(AppMessage::ExitApp(false))),
                 ))
