@@ -1,4 +1,5 @@
 mod app;
+mod base_description_component;
 mod custom_button_component;
 mod divider_component;
 mod entry_component;

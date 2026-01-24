@@ -15,6 +15,7 @@ use iced_aw::{Menu, menu_bar, menu_items};
 use iced_fonts::LUCIDE_FONT_BYTES;
 use iced_fonts::lucide::plus;
 
+use crate::base_description_component::{LinkElement, link_description};
 use crate::entry_component::entry;
 use crate::menu_button_component::menu_button;
 use crate::search_component::search;
@@ -51,6 +52,7 @@ pub enum AppMessage {
     ExitApp(bool),
     OpenFile(bool),
     FileSelected(PathBuf),
+    OpenLink(String),
     None,
 }
 
@@ -361,6 +363,13 @@ impl App {
                     )))
                 }
             }
+            AppMessage::OpenLink(link) => {
+                println!("{:#}", link);
+                match open::that(link) {
+                    Ok(_) => Task::none(),
+                    Err(_) => Task::none(),
+                }
+            }
             AppMessage::None => Task::none(),
         }
     }
@@ -409,9 +418,15 @@ impl App {
             .align_x(Horizontal::Right)
             .align_y(Vertical::Bottom)
             .padding(15);
+        let link_element: LinkElement = LinkElement::new();
+        let link_test = link_description(
+            link_element,
+            AppMessage::OpenLink("https://www.google.com".to_string()),
+        );
         let layers: Vec<Element<AppMessage, Theme, Renderer>> = vec![
             column![self.get_menus(), scrollable(entries_column)].into(),
             add_button.into(),
+            container(link_test).width(Fill).padding(100).into(),
         ];
         stack(layers).width(Fill).height(Fill).into()
     }

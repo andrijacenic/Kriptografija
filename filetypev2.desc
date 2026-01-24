@@ -1,0 +1,3 @@
+{version} = 2
+Key : Description{<img="{location}" text="{text}">, <video="{location}">, <link="{location}">, <sound="{location}">}
+Key : Description{<img location="{location}" text="{text}">, <video location="{location}">, <link location="{location}">, <sound location="{location}">}

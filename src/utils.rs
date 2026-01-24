@@ -109,83 +109,6 @@ where
         Ok(())
     }
 
-    // pub fn load_file(&self, filename: String) -> Result<(AppData<Message>, Message)> {
-    //     let reg = Regex::new(r"(?P<key>(?:\\:|[^:])+):(?P<desc>.*)").unwrap();
-
-    //     if !Path::exists(Path::new(&filename)) {
-    //         return Err(io::Error::new(
-    //             io::ErrorKind::NotFound,
-    //             "File does not exist",
-    //         ));
-    //     }
-
-    //     let file = File::open(filename)?;
-    //     let reader = BufReader::new(file);
-    //     let mut lines = reader.lines();
-
-    //     let first_line = lines
-    //         .next()
-    //         .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "File is empty"))??;
-
-    //     let version =
-    //         first_line.trim().parse::<u32>().ok().ok_or_else(|| {
-    //             io::Error::new(io::ErrorKind::InvalidData, "Invalid version format")
-    //         })?;
-
-    //     if version != FILE_VERSION {
-    //         window_manager
-    //             .add_window(WindowContent::new(
-    //                 WindowType::Warning,
-    //                 "Version Mismatch".to_string(),
-    //                 format!(
-    //                     "Expected version {}, but found version {}.\nSome features may not work correctly.",
-    //                     FILE_VERSION, version
-    //                 ).to_string(),
-    //                 None,
-    //                 false,
-    //                 true,
-    //                 self.message.clone()
-    //             ));
-    //     }
-
-    //     let mut elements = Vec::new();
-    //     while let Some(line_result) = lines.next() {
-    //         match line_result {
-    //             Err(e) => return Err(e),
-    //             Ok(line) => {
-    //                 if let Some((key, desc)) = reg.captures(&line).map(|cap| {
-    //                     (
-    //                         cap.name("key").unwrap().as_str().replace(r"\:", ":"),
-    //                         cap.name("desc").unwrap().as_str().replace(r"\:", ":"),
-    //                     )
-    //                 }) {
-    //                     elements.push(DataEntry::new(key.trim(), desc.trim()));
-    //                 } else {
-    //                     window_manager.add_window(WindowContent::new(
-    //                         WindowType::Warning,
-    //                         "Undifined line format.".to_string(),
-    //                         format!(
-    //                             "Expected '<key>:<description>'  found {}.\nLine ignored.",
-    //                             line
-    //                         )
-    //                         .to_string(),
-    //                         None,
-    //                         false,
-    //                         true,
-    //                         self.message.clone(),
-    //                     ));
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     Ok(AppData {
-    //         version,
-    //         entries: elements,
-    //         message: self.message.clone(),
-    //     })
-    // }
-
     pub fn save_file(&self, filename: String) -> Result<()> {
         match File::create(filename) {
             Ok(mut file) => {
@@ -228,3 +151,5 @@ pub fn load_icon() -> ImageResult<Icon> {
         Err(error) => Err(error),
     }
 }
+
+// pub fn parseDescription() -> string
