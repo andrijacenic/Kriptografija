@@ -2,10 +2,12 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Result};
 use std::path::Path;
 
+use iced::Color;
 use iced::window::Icon;
 use iced::window::icon::from_rgba;
 use image::error::DecodingError;
 use image::{GenericImageView, ImageError, ImageResult};
+use palette::{FromColor, Hsl, Srgb};
 use regex::Regex;
 use uuid::Uuid;
 
@@ -152,4 +154,15 @@ pub fn load_icon() -> ImageResult<Icon> {
     }
 }
 
-// pub fn parseDescription() -> string
+pub fn shift_hue(color: Color, amount_degrees: f32) -> Color {
+    let srgb = Srgb::new(color.r, color.g, color.b);
+    let mut hsl = Hsl::from_color(srgb);
+    hsl.hue = hsl.hue + amount_degrees;
+    let shifted_rgb = Srgb::from_color(hsl);
+    Color {
+        r: shifted_rgb.red,
+        g: shifted_rgb.green,
+        b: shifted_rgb.blue,
+        a: color.a,
+    }
+}

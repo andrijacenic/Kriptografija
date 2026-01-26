@@ -15,7 +15,10 @@ use iced_aw::{Menu, menu_bar, menu_items};
 use iced_fonts::LUCIDE_FONT_BYTES;
 use iced_fonts::lucide::plus;
 
-use crate::base_description_component::{LinkElement, link_description};
+use crate::base_description_component::{
+    DescriptionElement, DescriptionImage, DescriptionLinkAction, DescriptionSound, Link,
+    description_component,
+};
 use crate::entry_component::entry;
 use crate::menu_button_component::menu_button;
 use crate::search_component::search;
@@ -365,10 +368,11 @@ impl App {
             }
             AppMessage::OpenLink(link) => {
                 println!("{:#}", link);
-                match open::that(link) {
-                    Ok(_) => Task::none(),
-                    Err(_) => Task::none(),
-                }
+                // match open::that(link) {
+                //     Ok(_) => Task::none(),
+                //     Err(_) => Task::none(),
+                // }
+                Task::none()
             }
             AppMessage::None => Task::none(),
         }
@@ -418,13 +422,36 @@ impl App {
             .align_x(Horizontal::Right)
             .align_y(Vertical::Bottom)
             .padding(15);
-        let link_element: LinkElement = LinkElement::new();
-        let link_test = link_description(
+        let mut link_element: Vec<DescriptionElement> = Vec::new();
+        link_element.push(DescriptionElement::Text(
+            "DESCRIPTIONasd asdasdasdas ELEME dsa das dasd NT ".to_string(),
+        ));
+        link_element.push(DescriptionElement::Link(Link {
+            text: "TEXTsadasdasdas ".to_string(),
+            link: "https://www.google.com".to_string(),
+        }));
+        link_element.push(DescriptionElement::Image(DescriptionImage {
+            text: "TEXTsadasdasdas ".to_string(),
+            image: "https://www.google.com".to_string(),
+        }));
+        link_element.push(DescriptionElement::Sound(DescriptionSound {
+            text: "TEXTsadasdasdas ".to_string(),
+            sound: "https://www.google.com".to_string(),
+        }));
+        let link_test = description_component(
             link_element,
-            AppMessage::OpenLink("https://www.google.com".to_string()),
+            |value| match value {
+                DescriptionElement::Image(image) => {
+                    AppMessage::OpenLink(format!("{:#} : {:#}", image.image, image.text))
+                }
+                DescriptionElement::Link(link) => AppMessage::OpenLink(link.link),
+                DescriptionElement::Sound(sound) => AppMessage::None,
+                DescriptionElement::Text(value) => AppMessage::None,
+            },
+            &self.theme,
         );
         let layers: Vec<Element<AppMessage, Theme, Renderer>> = vec![
-            column![self.get_menus(), scrollable(entries_column)].into(),
+            // column![self.get_menus(), scrollable(entries_column)].into(),
             add_button.into(),
             container(link_test).width(Fill).padding(100).into(),
         ];

@@ -1,54 +1,76 @@
-use iced::widget::button::{Status, Style};
-use iced::widget::{button, container, text};
+use iced::widget::{rich_text, span};
 use iced::{Element, Theme};
 
-pub struct DescriptionElement {
-    pub text: String,
-}
+use crate::utils::shift_hue;
 
-pub struct LinkElement {
-    pub base: DescriptionElement,
+#[derive(Clone)]
+pub struct Link {
+    pub text: String,
     pub link: String,
 }
 
-impl LinkElement {
-    pub fn new() -> Self {
-        LinkElement {
-            base: DescriptionElement {
-                text: "aaaa".to_string(),
-            },
-            link: "linkkkk".to_string(),
-        }
-    }
+#[derive(Clone)]
+pub struct DescriptionImage {
+    pub text: String,
+    pub image: String,
 }
 
-pub fn base_description<'a, Message>(description: DescriptionElement) -> Element<'a, Message>
-where
-    Message: 'a,
-{
-    text(description.text).into()
+#[derive(Clone)]
+pub struct DescriptionSound {
+    pub text: String,
+    pub sound: String,
 }
 
-pub fn link_description<'a, Message>(
-    description: LinkElement,
-    on_press: Message,
+#[derive(Clone)]
+pub enum DescriptionElement {
+    Text(String),
+    Link(Link),
+    Image(DescriptionImage),
+    Sound(DescriptionSound),
+}
+
+#[derive(Clone)]
+pub enum DescriptionLinkAction {
+    Link(Link),
+    Image(DescriptionImage),
+    Sound(),
+}
+
+pub fn description_component<'a, Message>(
+    description_elements: Vec<DescriptionElement>,
+    on_link: impl Fn(DescriptionElement) -> Message + 'a,
+    theme: &Theme,
 ) -> Element<'a, Message>
 where
     Message: Clone + 'a,
 {
-    container(
-        button(text(description.base.text))
-            .style(|theme: &Theme, status: Status| Style {
-                text_color: match status {
-                    Status::Active => theme.extended_palette().primary.strong.color,
-                    Status::Pressed => theme.extended_palette().primary.weak.color,
-                    Status::Hovered => theme.extended_palette().primary.base.color,
-                    Status::Disabled => theme.extended_palette().background.strong.color,
-                },
-                background: None,
-                ..Default::default()
-            })
-            .on_press(on_press),
-    )
-    .into()
+    let spans: Vec<_> = description_elements
+        .into_iter()
+        .map(|value| {
+            let span_element = match value.clone() {
+                DescriptionElement::Text(content) => span(content),
+                DescriptionElement::Link(ld) => span(ld.text.clone())
+                    .color(theme.extended_palette().primary.strong.color)
+                    .underline(true),
+                DescriptionElement::Image(image) => span(image.text.clone())
+                    .color(shift_hue(
+                        theme.extended_palette().primary.strong.color,
+                        100.0,
+                    ))
+                    .underline(true),
+                DescriptionElement::Sound(sound) => span(sound.text.clone())
+                    .color(shift_hue(
+                        theme.extended_palette().primary.strong.color,
+                        200.0,
+                    ))
+                    .underline(true),
+            };
+            span_element.link(value)
+        })
+        .collect();
+
+    rich_text(spans)
+        .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
+        .on_link_click(on_link)
+        .into()
 }
