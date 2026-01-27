@@ -2,23 +2,21 @@ use std::path::PathBuf;
 
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
-use iced::Alignment::Center;
+
 use iced::alignment::{Horizontal, Vertical};
 use iced::border::radius;
-use iced::widget::{
-    Column, button, column, combo_box, container, row, scrollable, text, text_input,
-};
+use iced::widget::{Column, button, column, combo_box, container, scrollable, text};
 use iced::widget::{opaque, stack};
-use iced::{Border, Element, Renderer, Task, Theme, font};
+use iced::{Border, Element, Padding, Renderer, Task, Theme, font};
 use iced::{Fill, Length};
 use iced_aw::{Menu, menu_bar, menu_items};
 use iced_fonts::LUCIDE_FONT_BYTES;
 use iced_fonts::lucide::plus;
 
 use crate::base_description_component::{
-    DescriptionElement, DescriptionImage, DescriptionLinkAction, DescriptionSound, Link,
-    description_component,
+    DescriptionElement, DescriptionImage, DescriptionSound, Link, description_component,
 };
+use crate::entity_edit_component::{InputChange, entity_edit};
 use crate::entry_component::entry;
 use crate::menu_button_component::menu_button;
 use crate::search_component::search;
@@ -422,38 +420,46 @@ impl App {
             .align_x(Horizontal::Right)
             .align_y(Vertical::Bottom)
             .padding(15);
-        let mut link_element: Vec<DescriptionElement> = Vec::new();
-        link_element.push(DescriptionElement::Text(
-            "DESCRIPTIONasd asdasdasdas ELEME dsa das dasd NT ".to_string(),
-        ));
-        link_element.push(DescriptionElement::Link(Link {
-            text: "TEXTsadasdasdas ".to_string(),
-            link: "https://www.google.com".to_string(),
-        }));
-        link_element.push(DescriptionElement::Image(DescriptionImage {
-            text: "TEXTsadasdasdas ".to_string(),
-            image: "https://www.google.com".to_string(),
-        }));
-        link_element.push(DescriptionElement::Sound(DescriptionSound {
-            text: "TEXTsadasdasdas ".to_string(),
-            sound: "https://www.google.com".to_string(),
-        }));
-        let link_test = description_component(
-            link_element,
-            |value| match value {
-                DescriptionElement::Image(image) => {
-                    AppMessage::OpenLink(format!("{:#} : {:#}", image.image, image.text))
-                }
-                DescriptionElement::Link(link) => AppMessage::OpenLink(link.link),
-                DescriptionElement::Sound(sound) => AppMessage::None,
-                DescriptionElement::Text(value) => AppMessage::None,
-            },
-            &self.theme,
-        );
+        // let mut link_element: Vec<DescriptionElement> = Vec::new();
+        // link_element.push(DescriptionElement::Text(
+        //     "DESCRIPTIONasd asdasdasdas ELEME dsa das dasd NT ".to_string(),
+        // ));
+        // link_element.push(DescriptionElement::Link(Link {
+        //     text: "TEXTsadasdasdas ".to_string(),
+        //     link: "https://www.google.com".to_string(),
+        // }));
+        // link_element.push(DescriptionElement::Image(DescriptionImage {
+        //     text: "TEXTsadasdasdas ".to_string(),
+        //     image: "https://www.google.com".to_string(),
+        // }));
+        // link_element.push(DescriptionElement::Sound(DescriptionSound {
+        //     text: "TEXTsadasdasdas ".to_string(),
+        //     sound: "https://www.google.com".to_string(),
+        // }));
+        // let link_test = description_component(
+        //     link_element,
+        //     |value| match value {
+        //         DescriptionElement::Image(image) => {
+        //             AppMessage::OpenLink(format!("{:#} : {:#}", image.image, image.text))
+        //         }
+        //         DescriptionElement::Link(link) => AppMessage::OpenLink(link.link),
+        //         DescriptionElement::Sound(sound) => AppMessage::None,
+        //         DescriptionElement::Text(value) => AppMessage::None,
+        //     },
+        //     &self.theme,
+        // );
         let layers: Vec<Element<AppMessage, Theme, Renderer>> = vec![
-            // column![self.get_menus(), scrollable(entries_column)].into(),
+            column![self.get_menus(), scrollable(entries_column)].into(),
             add_button.into(),
-            container(link_test).width(Fill).padding(100).into(),
+            // container(link_test)
+            //     .width(Fill)
+            //     .padding(Padding {
+            //         top: 10.0,
+            //         bottom: 10.0,
+            //         left: 100.0,
+            //         right: 20.0,
+            //     })
+            //     .into(),
         ];
         stack(layers).width(Fill).height(Fill).into()
     }
@@ -561,47 +567,19 @@ impl App {
     }
 
     fn create_entity_add_window_body(&self) -> Element<'_, AppMessage> {
-        let label_width = Length::Fixed(85.0);
-
-        column![
-            text("Add an entry below").size(16),
-            row![
-                container(text("Key").size(16).width(label_width).align_y(Center)).padding(5),
-                text_input("Key", self.key_input_value.as_str())
-                    .style(|theme, status| {
-                        let mut style = iced::widget::text_input::default(theme, status);
-                        if !self.is_key_input_valid() {
-                            style.border.color = theme.palette().danger;
-                            style.border.width = 1.0;
-                        }
-                        style
-                    })
-                    .on_input(|value| { AppMessage::InputChange(InputType::Key, value) })
-            ]
-            .spacing(10),
-            row![
-                container(
-                    text("Description")
-                        .size(16)
-                        .width(label_width)
-                        .align_y(Center)
-                )
-                .padding(5),
-                text_input("Description", self.decription_input_value.as_str())
-                    .style(|theme, status| {
-                        let mut style = iced::widget::text_input::default(theme, status);
-                        if !self.is_description_input_valid() {
-                            style.border.color = theme.palette().danger;
-                            style.border.width = 1.0;
-                        }
-                        style
-                    })
-                    .on_input(|value| { AppMessage::InputChange(InputType::Description, value) })
-            ]
-            .spacing(10)
-        ]
-        .spacing(15)
-        .into()
+        entity_edit(
+            Length::Fixed(85.0),
+            self.key_input_value.as_str(),
+            !self.is_key_input_valid(),
+            self.decription_input_value.as_str(),
+            !self.is_description_input_valid(),
+            |change: InputChange| match change {
+                InputChange::Key(value) => AppMessage::InputChange(InputType::Key, value),
+                InputChange::Description(value) => {
+                    AppMessage::InputChange(InputType::Description, value)
+                }
+            },
+        )
     }
 
     fn is_key_input_valid(&self) -> bool {

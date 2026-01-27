@@ -29,16 +29,9 @@ pub enum DescriptionElement {
     Sound(DescriptionSound),
 }
 
-#[derive(Clone)]
-pub enum DescriptionLinkAction {
-    Link(Link),
-    Image(DescriptionImage),
-    Sound(),
-}
-
 pub fn description_component<'a, Message>(
     description_elements: Vec<DescriptionElement>,
-    on_link: impl Fn(DescriptionElement) -> Message + 'a,
+    on_click: impl Fn(DescriptionElement) -> Message + 'a,
     theme: &Theme,
 ) -> Element<'a, Message>
 where
@@ -71,6 +64,6 @@ where
 
     rich_text(spans)
         .wrapping(iced::widget::text::Wrapping::WordOrGlyph)
-        .on_link_click(on_link)
+        .on_link_click(on_click)
         .into()
 }
