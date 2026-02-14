@@ -7,14 +7,14 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::border::radius;
 use iced::widget::{Column, button, column, combo_box, container, scrollable, text};
 use iced::widget::{opaque, stack};
-use iced::{Border, Element, Padding, Renderer, Task, Theme, font};
+use iced::{Border, Element, Renderer, Task, Theme, font};
 use iced::{Fill, Length};
 use iced_aw::{Menu, menu_bar, menu_items};
 use iced_fonts::LUCIDE_FONT_BYTES;
 use iced_fonts::lucide::plus;
 
 use crate::base_description_component::{
-    DescriptionElement, DescriptionImage, DescriptionSound, Link, description_component,
+    DescriptionElement, parse_description_elements, serialize_description_elements,
 };
 use crate::entity_edit_component::{InputChange, entity_edit};
 use crate::entry_component::entry;
@@ -38,7 +38,7 @@ impl std::fmt::Display for InputType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum AppMessage {
     OpenWindow(WindowContent<AppMessage>),
     CloseWindow((Option<WindowContent<AppMessage>>, bool)),
@@ -184,7 +184,7 @@ impl App {
             AppMessage::EditEntry(entry) => {
                 self.editing_id = Some(entry.id);
                 self.key_input_value = entry.key;
-                self.decription_input_value = entry.description;
+                self.decription_input_value = serialize_description_elements(entry.description);
                 Task::done(AppMessage::OpenWindow(WindowContent::new(
                     WindowType::EntryEditor,
                     "Edit Entry".to_string(),
@@ -412,6 +412,15 @@ impl App {
                 e,
                 AppMessage::DeleteEntry((e.clone(), false)),
                 AppMessage::EditEntry(e.clone()),
+                |value| match value {
+                    DescriptionElement::Image(image) => {
+                        AppMessage::OpenLink(format!("{:#} : {:#}", image.image, image.text))
+                    }
+                    DescriptionElement::Link(link) => AppMessage::OpenLink(link.link),
+                    DescriptionElement::Sound(sound) => AppMessage::None,
+                    DescriptionElement::Text(value) => AppMessage::None,
+                },
+                &self.theme,
             ));
         }
         let add_button = container(button(plus()).on_press(AppMessage::AddNewEntry))
@@ -420,46 +429,9 @@ impl App {
             .align_x(Horizontal::Right)
             .align_y(Vertical::Bottom)
             .padding(15);
-        // let mut link_element: Vec<DescriptionElement> = Vec::new();
-        // link_element.push(DescriptionElement::Text(
-        //     "DESCRIPTIONasd asdasdasdas ELEME dsa das dasd NT ".to_string(),
-        // ));
-        // link_element.push(DescriptionElement::Link(Link {
-        //     text: "TEXTsadasdasdas ".to_string(),
-        //     link: "https://www.google.com".to_string(),
-        // }));
-        // link_element.push(DescriptionElement::Image(DescriptionImage {
-        //     text: "TEXTsadasdasdas ".to_string(),
-        //     image: "https://www.google.com".to_string(),
-        // }));
-        // link_element.push(DescriptionElement::Sound(DescriptionSound {
-        //     text: "TEXTsadasdasdas ".to_string(),
-        //     sound: "https://www.google.com".to_string(),
-        // }));
-        // let link_test = description_component(
-        //     link_element,
-        //     |value| match value {
-        //         DescriptionElement::Image(image) => {
-        //             AppMessage::OpenLink(format!("{:#} : {:#}", image.image, image.text))
-        //         }
-        //         DescriptionElement::Link(link) => AppMessage::OpenLink(link.link),
-        //         DescriptionElement::Sound(sound) => AppMessage::None,
-        //         DescriptionElement::Text(value) => AppMessage::None,
-        //     },
-        //     &self.theme,
-        // );
         let layers: Vec<Element<AppMessage, Theme, Renderer>> = vec![
             column![self.get_menus(), scrollable(entries_column)].into(),
             add_button.into(),
-            // container(link_test)
-            //     .width(Fill)
-            //     .padding(Padding {
-            //         top: 10.0,
-            //         bottom: 10.0,
-            //         left: 100.0,
-            //         right: 20.0,
-            //     })
-            //     .into(),
         ];
         stack(layers).width(Fill).height(Fill).into()
     }
@@ -526,7 +498,10 @@ impl App {
                                 DataEntry {
                                     id: self.editing_id.unwrap_or(uuid::Uuid::new_v4()),
                                     key: self.key_input_value.clone(),
-                                    description: self.decription_input_value.clone(),
+                                    description: parse_description_elements(
+                                        self.decription_input_value.clone(),
+                                    ),
+                                    description_raw: self.decription_input_value.clone(),
                                 },
                                 Some(window_content.clone()),
                             )))
@@ -600,25 +575,24 @@ impl App {
         } else {
             let matcher = SkimMatcherV2::default().ignore_case();
 
-            let mut matches: Vec<(i64, &DataEntry)> = self
-                .app_data
-                .entries
-                .iter()
-                .filter_map(|entry| {
-                    let threshold = 50;
+            let mut matches: Vec<(i64, &DataEntry)> =
+                self.app_data
+                    .entries
+                    .iter()
+                    .filter_map(|entry| {
+                        let threshold = 50;
 
-                    let score = match self.searched_input.unwrap() {
-                        InputType::Description => {
-                            matcher.fuzzy_match(&entry.description, &self.search_input_value)
-                        }
-                        _ => matcher.fuzzy_match(&entry.key, &self.search_input_value),
-                    };
+                        let score = match self.searched_input.unwrap() {
+                            InputType::Description => matcher
+                                .fuzzy_match(&entry.description_raw, &self.search_input_value),
+                            _ => matcher.fuzzy_match(&entry.key, &self.search_input_value),
+                        };
 
-                    score
-                        .filter(|&score| score > threshold)
-                        .map(|score| (score, entry))
-                })
-                .collect();
+                        score
+                            .filter(|&score| score > threshold)
+                            .map(|score| (score, entry))
+                    })
+                    .collect();
 
             matches.sort_by(|a, b| b.0.cmp(&a.0));
 

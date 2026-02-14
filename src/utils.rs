@@ -11,13 +11,16 @@ use palette::{FromColor, Hsl, Srgb};
 use regex::Regex;
 use uuid::Uuid;
 
-pub const FILE_VERSION: u32 = 1;
+use crate::base_description_component::{DescriptionElement, parse_description_elements};
 
-#[derive(Debug, Clone)]
+pub const FILE_VERSION: u32 = 2;
+
+#[derive(Clone, Debug)]
 pub struct DataEntry {
     pub id: Uuid,
     pub key: String,
-    pub description: String,
+    pub description: Vec<DescriptionElement>,
+    pub description_raw: String,
 }
 
 impl DataEntry {
@@ -25,7 +28,8 @@ impl DataEntry {
         Self {
             id: Uuid::new_v4(),
             key: key.to_string(),
-            description: description.to_string(),
+            description: parse_description_elements(description.to_string()),
+            description_raw: description.to_string(),
         }
     }
 }
@@ -76,7 +80,7 @@ where
             .parse::<u32>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid version format"))?;
 
-        if version != FILE_VERSION {
+        if version > FILE_VERSION {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "Version mismatch",
@@ -122,7 +126,7 @@ where
                         file,
                         "{}:{}",
                         entry.key.replace(":", r"\:"),
-                        entry.description.replace(":", r"\:")
+                        entry.description_raw.replace(":", r"\:")
                     )?;
                 }
             }

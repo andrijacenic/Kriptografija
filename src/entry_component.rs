@@ -5,6 +5,7 @@ use iced::widget::{container, row, text};
 use iced::{Element, Theme};
 use iced_fonts::lucide::{delete, pen};
 
+use crate::base_description_component::{DescriptionElement, description_component};
 use crate::custom_button_component::custom_button;
 use crate::divider_component::divider;
 use crate::utils::DataEntry;
@@ -13,6 +14,8 @@ pub fn entry<'a, Message>(
     entry: &DataEntry,
     on_delete: Message,
     on_edit: Message,
+    on_click: impl Fn(DescriptionElement) -> Message + 'a,
+    theme: &Theme,
 ) -> Element<'a, Message>
 where
     Message: Clone + 'a,
@@ -21,7 +24,12 @@ where
         row![
             container(text(entry.key.clone())).width(FillPortion(4)),
             divider(1),
-            container(text(entry.description.clone())).width(FillPortion(8)),
+            container(description_component(
+                entry.description.clone(),
+                on_click,
+                theme
+            ))
+            .width(FillPortion(8)),
             divider(1),
             container(
                 row![

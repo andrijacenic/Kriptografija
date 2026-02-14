@@ -63,7 +63,7 @@ pub fn custom_window<'a, Message>(
     body: Option<impl Into<Element<'a, Message, Theme, Renderer>>>,
 ) -> Element<'a, Message>
 where
-    Message: Clone + Debug + 'a,
+    Message: Clone + 'a,
 {
     let card_style = match window_content.window_type {
         WindowType::Warning => style::card::warning,
