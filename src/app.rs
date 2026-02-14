@@ -420,8 +420,8 @@ impl App {
                         AppMessage::OpenLink(format!("{:#} : {:#}", image.image, image.text))
                     }
                     DescriptionElement::Link(link) => AppMessage::OpenLink(link.link),
-                    DescriptionElement::Sound(sound) => AppMessage::None,
-                    DescriptionElement::Text(value) => AppMessage::None,
+                    DescriptionElement::Sound(sound) => AppMessage::OpenLink(sound.sound),
+                    DescriptionElement::Text(_) => AppMessage::None,
                 },
                 &self.theme,
             ));

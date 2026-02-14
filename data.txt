@@ -1,4 +1,4 @@
 2
-Pralina : Slika zabe je ovde: <image="src/here.png" text="zaba"> Slika zabe je ovde: <image="src/here.png" text="zaba"> Slika zabe je ovde: <image="src/here.png" text="zaba"> Slika zabe je ovde: <image="src/here.png" text="zaba">
-Kikiriki : Slika zabe je ovde: <link="src/here.png" text="link do zabe">
-Zvuk : Zbuk je ovde: <sound="src/here.png" text="link do zabe">
+Pralina:Slika zabe je ovde\: <image="src/here.png" text="zaba"> Slika zabe je ovde\: <image="src/here.png" text="zaba"> Slika zabe je ovde\: <image="src/here.png" text="zaba"> Slika zabe je ovde\: <image="src/here.png" text="zaba">
+Kikiriki:Slika zabe je ovde\: <link="src/here.png" text="link do zabe">
+Zvuk:Zbuk je ovde\: <sound="src/here.png" text="link do zabe">

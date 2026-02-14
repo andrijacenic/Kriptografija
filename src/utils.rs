@@ -49,7 +49,7 @@ where
 {
     pub fn new(none: Message) -> AppData<Message> {
         AppData {
-            version: 1,
+            version: FILE_VERSION,
             entries: Vec::new(),
             _message: none,
         }
