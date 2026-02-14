@@ -1,8 +1,6 @@
 use std::path::PathBuf;
 
-use fuzzy_matcher::FuzzyMatcher;
-use fuzzy_matcher::skim::SkimMatcherV2;
-
+use fuse_rust::Fuse;
 use iced::alignment::{Horizontal, Vertical};
 use iced::border::radius;
 use iced::widget::{Column, button, column, combo_box, container, scrollable, text};
@@ -68,6 +66,7 @@ pub struct App {
     entries_sorted: Vec<DataEntry>,
     search_inputs: combo_box::State<InputType>,
     searched_input: Option<InputType>,
+    fuse: Fuse,
 }
 
 impl App {
@@ -118,6 +117,10 @@ impl App {
                 entries_sorted,
                 search_inputs: combo_box::State::new(vec![InputType::Key, InputType::Description]),
                 searched_input: Some(InputType::Key),
+                fuse: Fuse {
+                    max_pattern_length: 100,
+                    ..Default::default()
+                },
             },
             combined_tasks,
         )
@@ -573,32 +576,33 @@ impl App {
         if self.search_input_value.is_empty() {
             self.entries_sorted = self.app_data.entries.clone();
         } else {
-            let matcher = SkimMatcherV2::default().ignore_case();
+            let search_query = self.search_input_value.as_str();
+            let fuse = &self.fuse;
 
-            let mut matches: Vec<(i64, &DataEntry)> =
-                self.app_data
-                    .entries
-                    .iter()
-                    .filter_map(|entry| {
-                        let threshold = 50;
+            let mut scored_entries: Vec<(DataEntry, f64)> = self
+                .app_data
+                .entries
+                .iter()
+                .filter_map(|entry| {
+                    let search_text = match self.searched_input.unwrap() {
+                        InputType::Key => entry.key.as_str(),
+                        _ => entry.description_raw.as_str(),
+                    };
+                    let score_result = fuse.search_text_in_string(search_query, search_text);
 
-                        let score = match self.searched_input.unwrap() {
-                            InputType::Description => matcher
-                                .fuzzy_match(&entry.description_raw, &self.search_input_value),
-                            _ => matcher.fuzzy_match(&entry.key, &self.search_input_value),
-                        };
+                    match score_result {
+                        Some(result) if result.score <= 0.5 => Some((entry.clone(), result.score)),
+                        _ => None,
+                    }
+                })
+                .collect();
 
-                        score
-                            .filter(|&score| score > threshold)
-                            .map(|score| (score, entry))
-                    })
-                    .collect();
+            scored_entries
+                .sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 
-            matches.sort_by(|a, b| b.0.cmp(&a.0));
-
-            self.entries_sorted = matches
+            self.entries_sorted = scored_entries
                 .into_iter()
-                .map(|(_, entry)| entry.clone())
+                .map(|(entry, _score)| entry)
                 .collect();
         }
     }
