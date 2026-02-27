@@ -10,14 +10,25 @@ use iced_aw::{card, style};
 use iced_fonts::lucide::{info, octagon_alert, triangle_alert};
 use uuid::Uuid;
 
-use crate::custom_button_component::custom_button;
+use crate::{
+    base_description_component::{DescriptionImage, DescriptionSound},
+    custom_button_component::custom_button,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WindowType {
     Info,
     Warning,
+    Image,
     Error,
     EntryEditor,
+}
+
+#[derive(Debug, Clone)]
+pub enum WindowContentType {
+    StringContent(String),
+    ImageContant(DescriptionImage),
+    SoundContent(DescriptionSound),
 }
 
 #[derive(Debug, Clone)]
@@ -25,7 +36,7 @@ pub struct WindowContent<Message> {
     pub id: Uuid,
     pub window_type: WindowType,
     pub title: String,
-    pub content: String,
+    pub content: WindowContentType,
     pub window_width: Option<u32>,
     pub show_cancel: bool,
     pub show_okay: bool,
@@ -36,7 +47,7 @@ impl<Message> WindowContent<Message> {
     pub fn new(
         window_type: WindowType,
         title: String,
-        content: String,
+        content: WindowContentType,
         window_width: Option<u32>,
         show_cancel: bool,
         show_okay: bool,
@@ -86,7 +97,12 @@ where
     let body_content = if let Some(body_elem) = body {
         body_elem.into()
     } else {
-        text(window_content.content).size(16).into()
+        text(match window_content.content {
+            WindowContentType::StringContent(value) => value,
+            _ => "".to_string(), // TODO: SHOULDNT DO THIS
+        })
+        .size(16)
+        .into()
     };
 
     let mut footer: Row<'_, Message, Theme, Renderer> = row![horizontal()].spacing(10).width(Fill);

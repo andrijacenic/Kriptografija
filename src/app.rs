@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use fuse_rust::Fuse;
 use iced::alignment::{Horizontal, Vertical};
 use iced::border::radius;
-use iced::widget::{Column, button, column, combo_box, container, scrollable, text};
+use iced::widget::{Column, button, column, combo_box, container, image::viewer, scrollable, text};
 use iced::widget::{opaque, stack};
 use iced::{Border, Element, Renderer, Task, Theme, font};
 use iced::{Fill, Length};
@@ -12,7 +12,8 @@ use iced_fonts::LUCIDE_FONT_BYTES;
 use iced_fonts::lucide::plus;
 
 use crate::base_description_component::{
-    DescriptionElement, parse_description_elements, serialize_description_elements,
+    DescriptionElement, DescriptionImage, DescriptionSound, Link, parse_description_elements,
+    serialize_description_elements,
 };
 use crate::entity_edit_component::{InputChange, entity_edit};
 use crate::entry_component::entry;
@@ -20,7 +21,7 @@ use crate::menu_button_component::menu_button;
 use crate::search_component::search;
 use crate::theme;
 use crate::utils::{AppData, DataEntry};
-use crate::window_component::{WindowContent, WindowType, custom_window};
+use crate::window_component::{WindowContent, WindowContentType, WindowType, custom_window};
 use crate::window_manager::WindowManager;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,6 +35,14 @@ impl std::fmt::Display for InputType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
+}
+
+#[derive(Clone)]
+
+pub enum OpenType {
+    OpenLink(Link),
+    OpenImage(DescriptionImage),
+    OpenSound(DescriptionSound),
 }
 
 #[derive(Clone)]
@@ -51,7 +60,7 @@ pub enum AppMessage {
     ExitApp(bool),
     OpenFile(bool),
     FileSelected(PathBuf),
-    OpenLink(String),
+    OpenLink(OpenType),
     None,
 }
 
@@ -81,7 +90,7 @@ impl App {
             Err(error) => Task::done(AppMessage::OpenWindow(WindowContent::new(
                 WindowType::Error,
                 "Error Loading App Data.".to_string(),
-                format!("{:?}", error),
+                WindowContentType::StringContent(format!("{:?}", error)),
                 None,
                 false,
                 true,
@@ -94,7 +103,10 @@ impl App {
                 Err(e) => AppMessage::OpenWindow(WindowContent::new(
                     WindowType::Error,
                     "Font Load Error".to_string(),
-                    format!("Failed to load Lucide font: {:?}", e),
+                    WindowContentType::StringContent(format!(
+                        "Failed to load Lucide font: {:?}",
+                        e
+                    )),
                     None,
                     true,
                     true,
@@ -155,7 +167,7 @@ impl App {
                 Task::done(AppMessage::OpenWindow(WindowContent::new(
                     WindowType::EntryEditor,
                     "Add Entry".to_string(),
-                    String::new(),
+                    WindowContentType::StringContent(String::new()),
                     Some(600),
                     true,
                     true,
@@ -173,7 +185,9 @@ impl App {
                         Task::done(AppMessage::OpenWindow(WindowContent::new(
                             WindowType::Warning,
                             "Delete entry?".to_string(),
-                            "Warning deleting an entry is not reversable!".to_string(),
+                            WindowContentType::StringContent(
+                                "Warning deleting an entry is not reversable!".to_string(),
+                            ),
                             None,
                             true,
                             true,
@@ -191,7 +205,7 @@ impl App {
                 Task::done(AppMessage::OpenWindow(WindowContent::new(
                     WindowType::EntryEditor,
                     "Edit Entry".to_string(),
-                    String::new(),
+                    WindowContentType::StringContent(String::new()),
                     Some(600),
                     true,
                     true,
@@ -250,7 +264,9 @@ impl App {
                             AppMessage::OpenWindow(WindowContent::new(
                                 WindowType::Error,
                                 "Access Error".to_string(),
-                                "There was an error accessing files!".to_string(),
+                                WindowContentType::StringContent(
+                                    "There was an error accessing files!".to_string(),
+                                ),
                                 None,
                                 false,
                                 true,
@@ -267,7 +283,7 @@ impl App {
                     Ok(_) => self.window_manager.add_window(WindowContent::new(
                         WindowType::Info,
                         "Data saved!".to_string(),
-                        "Data saved successfully.".to_string(),
+                        WindowContentType::StringContent("Data saved successfully.".to_string()),
                         None,
                         false,
                         true,
@@ -276,7 +292,7 @@ impl App {
                     Err(e) => self.window_manager.add_window(WindowContent::new(
                         WindowType::Error,
                         "Saving data error!".to_string(),
-                        format!("Error saving data: {}", e),
+                        WindowContentType::StringContent(format!("Error saving data: {}", e)),
                         None,
                         false,
                         true,
@@ -303,7 +319,9 @@ impl App {
                             AppMessage::OpenWindow(WindowContent::new(
                                 WindowType::Error,
                                 "Access Error".to_string(),
-                                "There was an error accessing files!".to_string(),
+                                WindowContentType::StringContent(
+                                    "There was an error accessing files!".to_string(),
+                                ),
                                 None,
                                 false,
                                 true,
@@ -315,7 +333,9 @@ impl App {
                     Task::done(AppMessage::OpenWindow(WindowContent::new(
                         WindowType::Warning,
                         "If data not saved it will be lost!".to_string(),
-                        "Warning if data was not saved it will be lost!".to_string(),
+                        WindowContentType::StringContent(
+                            "Warning if data was not saved it will be lost!".to_string(),
+                        ),
                         None,
                         true,
                         true,
@@ -330,7 +350,10 @@ impl App {
                         Err(e) => AppMessage::OpenWindow(WindowContent::new(
                             WindowType::Error,
                             "Error loading file!".to_string(),
-                            format!("There was an error while loading file: {:?}", e),
+                            WindowContentType::StringContent(format!(
+                                "There was an error while loading file: {:?}",
+                                e
+                            )),
                             None,
                             false,
                             true,
@@ -344,7 +367,9 @@ impl App {
                     Task::done(AppMessage::OpenWindow(WindowContent::new(
                         WindowType::Error,
                         "Error loading file!".to_string(),
-                        "There was an error while loading file!".to_string(),
+                        WindowContentType::StringContent(
+                            "There was an error while loading file!".to_string(),
+                        ),
                         None,
                         false,
                         true,
@@ -359,7 +384,10 @@ impl App {
                     Task::done(AppMessage::OpenWindow(WindowContent::new(
                         WindowType::Warning,
                         "Leaving soo soon?".to_string(),
-                        "Exit the app?\nIf you didn't save the data it will be lost.".to_string(),
+                        WindowContentType::StringContent(
+                            "Exit the app?\nIf you didn't save the data it will be lost."
+                                .to_string(),
+                        ),
                         None,
                         true,
                         true,
@@ -367,14 +395,40 @@ impl App {
                     )))
                 }
             }
-            AppMessage::OpenLink(link) => {
-                println!("{:#}", link);
-                // match open::that(link) {
-                //     Ok(_) => Task::none(),
-                //     Err(_) => Task::none(),
-                // }
-                Task::none()
-            }
+            AppMessage::OpenLink(link) => match link {
+                OpenType::OpenImage(image) => {
+                    println!("{:?}", image);
+                    Task::done(AppMessage::OpenWindow(WindowContent::new(
+                        WindowType::Image,
+                        "View Image".to_string(),
+                        WindowContentType::ImageContant(image),
+                        Some(600),
+                        false,
+                        true,
+                        None,
+                    )))
+                }
+                OpenType::OpenLink(link) => {
+                    println!("{:?}", link);
+                    if !webbrowser::open(&link.link).is_ok() {
+                        Task::done(AppMessage::OpenWindow(WindowContent::new(
+                            WindowType::Warning,
+                            "Cannot Open Link?".to_string(),
+                            WindowContentType::StringContent("Link cannot be opened.".to_string()),
+                            None,
+                            false,
+                            true,
+                            None,
+                        )))
+                    } else {
+                        Task::none()
+                    }
+                }
+                OpenType::OpenSound(sound) => {
+                    println!("{:?}", sound);
+                    Task::none()
+                }
+            },
             AppMessage::None => Task::none(),
         }
     }
@@ -417,10 +471,14 @@ impl App {
                 AppMessage::EditEntry(e.clone()),
                 |value| match value {
                     DescriptionElement::Image(image) => {
-                        AppMessage::OpenLink(format!("{:#} : {:#}", image.image, image.text))
+                        AppMessage::OpenLink(OpenType::OpenImage(image))
                     }
-                    DescriptionElement::Link(link) => AppMessage::OpenLink(link.link),
-                    DescriptionElement::Sound(sound) => AppMessage::OpenLink(sound.sound),
+                    DescriptionElement::Link(link) => {
+                        AppMessage::OpenLink(OpenType::OpenLink(link))
+                    }
+                    DescriptionElement::Sound(sound) => {
+                        AppMessage::OpenLink(OpenType::OpenSound(sound))
+                    }
                     DescriptionElement::Text(_) => AppMessage::None,
                 },
                 &self.theme,
@@ -467,7 +525,9 @@ impl App {
             (menu_button(text("Info")).on_press(AppMessage::OpenWindow(WindowContent::new(
                 WindowType::Info,
                 "Info".to_string(),
-                "Developed by: Andrija Cenić (1910)\nProject: Cryptography Course.".to_string(),
+                WindowContentType::StringContent(
+                    "Developed by: Andrija Cenić (1910)\nProject: Cryptography Course.".to_string()
+                ),
                 None,
                 false,
                 true,
@@ -493,8 +553,8 @@ impl App {
     fn get_window_view(&self) -> Option<Element<'_, AppMessage>> {
         if let Some(window_content) = self.window_manager.get_window() {
             let (custom_body, on_okay): (Option<Element<'_, AppMessage>>, Option<AppMessage>) =
-                if let WindowType::EntryEditor = window_content.window_type {
-                    (
+                match window_content.window_type {
+                    WindowType::EntryEditor => (
                         Some(self.create_entity_add_window_body()),
                         if self.is_data_entry_valid() {
                             Some(AppMessage::AddEntry((
@@ -512,23 +572,36 @@ impl App {
                             Some(AppMessage::OpenWindow(WindowContent::new(
                                 WindowType::Warning,
                                 "Invalid Input data".to_string(),
-                                "Key and Description cannot be empty.".to_string(),
+                                WindowContentType::StringContent(
+                                    "Key and Description cannot be empty.".to_string(),
+                                ),
                                 None,
                                 false,
                                 true,
                                 None,
                             )))
                         },
-                    )
-                } else {
-                    (
+                    ),
+                    WindowType::Image => (
+                        self.create_image_view_window_body(match window_content.content.clone() {
+                            WindowContentType::ImageContant(image) => Some(image.image),
+                            _ => None,
+                        })
+                        .into(),
+                        Some(match &window_content.on_okay {
+                            Some(boxed_msg) => (**boxed_msg).clone(),
+                            None => AppMessage::CloseWindow((Some(window_content.clone()), true)),
+                        }),
+                    ),
+                    _ => (
                         None,
                         Some(match &window_content.on_okay {
                             Some(boxed_msg) => (**boxed_msg).clone(),
                             None => AppMessage::CloseWindow((Some(window_content.clone()), true)),
                         }),
-                    )
+                    ),
                 };
+
             Some(custom_window(
                 window_content.clone(),
                 AppMessage::CloseWindow((Some(window_content.clone()), false)),
@@ -558,6 +631,16 @@ impl App {
                 }
             },
         )
+    }
+
+    fn create_image_view_window_body(&self, image_path: Option<String>) -> Element<'_, AppMessage> {
+        match image_path {
+            Some(path) => iced::widget::image(path)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .into(),
+            None => text("No image found!").into(),
+        }
     }
 
     fn is_key_input_valid(&self) -> bool {
