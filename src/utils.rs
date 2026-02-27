@@ -121,12 +121,7 @@ where
         match File::create(filename) {
             Ok(mut file) => {
                 use std::io::Write;
-                match writeln!(file, "{}", self.version) {
-                    Ok(value) => println!("{:#?}", value),
-                    Err(err) => println!("{}", err),
-                }
-
-                println!("{}", self.version);
+                writeln!(file, "{}", self.version)?;
 
                 for entry in &self.entries {
                     writeln!(
@@ -137,7 +132,7 @@ where
                             .replace(":", r"\:")
                     )?
                 }
-                let _ = file.flush();
+                file.flush()?;
             }
             Err(e) => return Err(e),
         };

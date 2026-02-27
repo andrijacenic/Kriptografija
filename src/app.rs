@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use fuse_rust::Fuse;
 use iced::alignment::{Horizontal, Vertical};
 use iced::border::radius;
-use iced::widget::{Column, button, column, combo_box, container, image::viewer, scrollable, text};
+use iced::widget::{Column, button, column, combo_box, container, scrollable, text};
 use iced::widget::{opaque, stack};
 use iced::{Border, Element, Renderer, Task, Theme, font};
 use iced::{Fill, Length};
