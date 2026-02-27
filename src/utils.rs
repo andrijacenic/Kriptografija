@@ -11,7 +11,9 @@ use palette::{FromColor, Hsl, Srgb};
 use regex::Regex;
 use uuid::Uuid;
 
-use crate::base_description_component::{DescriptionElement, parse_description_elements};
+use crate::base_description_component::{
+    DescriptionElement, parse_description_elements, serialize_description_elements,
+};
 
 pub const FILE_VERSION: u32 = 2;
 
@@ -119,16 +121,23 @@ where
         match File::create(filename) {
             Ok(mut file) => {
                 use std::io::Write;
-                writeln!(file, "{}", self.version)?;
+                match writeln!(file, "{}", self.version) {
+                    Ok(value) => println!("{:#?}", value),
+                    Err(err) => println!("{}", err),
+                }
+
+                println!("{}", self.version);
 
                 for entry in &self.entries {
                     writeln!(
                         file,
                         "{}:{}",
                         entry.key.replace(":", r"\:"),
-                        entry.description_raw.replace(":", r"\:")
-                    )?;
+                        serialize_description_elements(entry.description.clone())
+                            .replace(":", r"\:")
+                    )?
                 }
+                let _ = file.flush();
             }
             Err(e) => return Err(e),
         };
