@@ -106,26 +106,26 @@ where
 {
     let spans: Vec<_> = description_elements
         .into_iter()
-        .map(|value| {
-            let span_element = match value.clone() {
-                DescriptionElement::Text(content) => span(content),
-                DescriptionElement::Link(ld) => span(ld.text.clone())
-                    .color(theme.extended_palette().primary.strong.color)
-                    .underline(true),
-                DescriptionElement::Image(image) => span(image.text.clone())
-                    .color(shift_hue(
-                        theme.extended_palette().primary.strong.color,
-                        100.0,
-                    ))
-                    .underline(true),
-                DescriptionElement::Sound(sound) => span(sound.text.clone())
-                    .color(shift_hue(
-                        theme.extended_palette().primary.strong.color,
-                        200.0,
-                    ))
-                    .underline(true),
-            };
-            span_element.link(value)
+        .map(|value| match value.clone() {
+            DescriptionElement::Text(content) => span(content),
+            DescriptionElement::Link(ld) => span(ld.text.clone())
+                .color(theme.extended_palette().primary.strong.color)
+                .underline(true)
+                .link(value),
+            DescriptionElement::Image(image) => span(image.text.clone())
+                .color(shift_hue(
+                    theme.extended_palette().primary.strong.color,
+                    100.0,
+                ))
+                .underline(true)
+                .link(value),
+            DescriptionElement::Sound(sound) => span(sound.text.clone())
+                .color(shift_hue(
+                    theme.extended_palette().primary.strong.color,
+                    200.0,
+                ))
+                .underline(true)
+                .link(value),
         })
         .collect();
 
