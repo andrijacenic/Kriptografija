@@ -20,6 +20,7 @@ pub enum WindowType {
     Info,
     Warning,
     Image,
+    Sound,
     Error,
     EntryEditor,
 }

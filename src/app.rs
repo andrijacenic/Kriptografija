@@ -1,6 +1,10 @@
+use std::fs::File;
+use std::io::BufReader;
 use std::path::PathBuf;
 
 use fuse_rust::Fuse;
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
+
 use iced::alignment::{Horizontal, Vertical};
 use iced::border::radius;
 use iced::widget::{Column, button, column, combo_box, container, scrollable, text};
@@ -61,7 +65,28 @@ pub enum AppMessage {
     OpenFile(bool),
     FileSelected(PathBuf),
     OpenLink(OpenType),
+    CloseSound,
+    Sound(bool),
     None,
+}
+
+struct AudioPlayer {
+    _stream: OutputStream,
+    stream_handle: OutputStreamHandle,
+    sink: Option<Sink>,
+    is_playing: bool,
+}
+
+impl AudioPlayer {
+    fn new() -> Self {
+        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+        AudioPlayer {
+            _stream,
+            stream_handle,
+            sink: None,
+            is_playing: false,
+        }
+    }
 }
 
 pub struct App {
@@ -76,6 +101,7 @@ pub struct App {
     search_inputs: combo_box::State<InputType>,
     searched_input: Option<InputType>,
     fuse: Fuse,
+    audio_player: AudioPlayer,
 }
 
 impl App {
@@ -133,6 +159,7 @@ impl App {
                     max_pattern_length: 100,
                     ..Default::default()
                 },
+                audio_player: AudioPlayer::new(),
             },
             combined_tasks,
         )
@@ -397,7 +424,6 @@ impl App {
             }
             AppMessage::OpenLink(link) => match link {
                 OpenType::OpenImage(image) => {
-                    println!("{:?}", image);
                     Task::done(AppMessage::OpenWindow(WindowContent::new(
                         WindowType::Image,
                         "View Image".to_string(),
@@ -409,7 +435,6 @@ impl App {
                     )))
                 }
                 OpenType::OpenLink(link) => {
-                    println!("{:?}", link);
                     if !webbrowser::open(&link.link).is_ok() {
                         Task::done(AppMessage::OpenWindow(WindowContent::new(
                             WindowType::Warning,
@@ -425,10 +450,75 @@ impl App {
                     }
                 }
                 OpenType::OpenSound(sound) => {
-                    println!("{:?}", sound);
-                    Task::none()
+                    // We use a closure to capture any error and log it
+                    let result = (|| -> Result<Sink, Box<dyn std::error::Error>> {
+                        let file = File::open(&sound.sound)?;
+
+                        // REMOVED BufReader::new() here:
+                        let source = Decoder::new(file)?;
+
+                        let sink = Sink::try_new(&self.audio_player.stream_handle)?;
+
+                        sink.append(source);
+                        sink.pause();
+                        Ok(sink)
+                    })();
+
+                    match result {
+                        Ok(sink) => {
+                            self.audio_player.sink = Some(sink);
+                            self.audio_player.is_playing = false; // Ensure state starts paused
+                            Task::done(AppMessage::OpenWindow(WindowContent::new(
+                                WindowType::Sound,
+                                "Sound".to_string(),
+                                WindowContentType::SoundContent(sound),
+                                Some(600),
+                                false,
+                                true,
+                                Some(AppMessage::CloseSound),
+                            )))
+                        }
+                        Err(e) => {
+                            // Log the error to the terminal/log file
+                            eprintln!(
+                                "[Audio Error]: Failed to load sound '{}': {}",
+                                sound.sound, e
+                            );
+
+                            Task::done(AppMessage::OpenWindow(WindowContent::new(
+                                WindowType::Warning,
+                                "Playback Error".to_string(),
+                                WindowContentType::StringContent(format!(
+                                    "Could not play sound file.\nDetails: {}",
+                                    e
+                                )),
+                                None,
+                                false,
+                                true,
+                                None,
+                            )))
+                        }
+                    }
                 }
             },
+            AppMessage::CloseSound => {
+                if let Some(sink) = self.audio_player.sink.take() {
+                    sink.stop(); // Replaced clear() and detach() with stop()
+                }
+                self.audio_player.is_playing = false; // Reset state
+                Task::done(AppMessage::CloseWindow((None, false)))
+            }
+            AppMessage::Sound(playing) => {
+                if let Some(sink) = &self.audio_player.sink {
+                    if playing {
+                        sink.play();
+                    } else {
+                        sink.pause();
+                    }
+                    self.audio_player.is_playing = playing; // Sync struct state
+                }
+                Task::none()
+            }
             AppMessage::None => Task::none(),
         }
     }
@@ -593,6 +683,17 @@ impl App {
                             None => AppMessage::CloseWindow((Some(window_content.clone()), true)),
                         }),
                     ),
+                    WindowType::Sound => (
+                        self.create_sound_view_window_body(match window_content.content.clone() {
+                            WindowContentType::SoundContent(sound) => Some(sound.sound),
+                            _ => None,
+                        })
+                        .into(),
+                        Some(match &window_content.on_okay {
+                            Some(boxed_msg) => (**boxed_msg).clone(),
+                            None => AppMessage::CloseWindow((Some(window_content.clone()), true)),
+                        }),
+                    ),
                     _ => (
                         None,
                         Some(match &window_content.on_okay {
@@ -641,6 +742,26 @@ impl App {
                 .into(),
             None => text("No image found!").into(),
         }
+    }
+
+    fn create_sound_view_window_body(&self, sound_path: Option<String>) -> Element<'_, AppMessage> {
+        let is_playing = self.audio_player.is_playing;
+        let button_label = if is_playing {
+            "Pause Sound"
+        } else {
+            "Play Sound"
+        };
+        column![
+            text(match sound_path {
+                Some(path) => path,
+                None => "Can't load".to_string(),
+            }),
+            container(button(text(button_label)).on_press(AppMessage::Sound(!is_playing)))
+        ]
+        .width(Fill)
+        .align_x(Horizontal::Center)
+        .padding(15)
+        .into()
     }
 
     fn is_key_input_valid(&self) -> bool {
