@@ -611,17 +611,31 @@ impl App {
                         .on_press(AppMessage::ExitApp(false))),
                 ))
             ),
-            (menu_button(text("Info")).on_press(AppMessage::OpenWindow(WindowContent::new(
-                WindowType::Info,
-                "Info".to_string(),
-                WindowContentType::StringContent(
-                    "Developed by: Andrija Cenić (1910)\nProject: Cryptography Course.".to_string()
-                ),
-                None,
-                false,
-                true,
-                None
-            ))))
+            (
+                menu_button(text("Info")).on_press(AppMessage::None),
+                menu_tpl(menu_items!(
+                    (menu_button(text("Author").width(Length::Fill)).on_press(
+                        AppMessage::OpenWindow(WindowContent::new(
+                            WindowType::Info,
+                            "Info".to_string(),
+                            WindowContentType::StringContent(
+                                "Developed by: Andrija Cenić (1910)\nProject: Cryptography Course."
+                                    .to_string()
+                            ),
+                            None,
+                            false,
+                            true,
+                            None
+                        ))
+                    )),
+                    (menu_button(text("Github").width(Length::Fill)).on_press(
+                        AppMessage::OpenLink(OpenType::OpenLink(Link {
+                            text: "".to_string(),
+                            link: "https://github.com/andrijacenic/Kriptografija".to_string()
+                        }))
+                    )),
+                ))
+            ),
         );
 
         container(mb)
